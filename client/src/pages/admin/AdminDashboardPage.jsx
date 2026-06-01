@@ -77,7 +77,7 @@ export function AdminDashboardPage() {
 
       {loading ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (
               <StatCardSkeleton key={i} />
             ))}
@@ -88,7 +88,7 @@ export function AdminDashboardPage() {
       ) : (
         <>
           {kpis && (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
               <StatCard
                 label="Active employees"
                 value={String(kpis.activeEmployees)}
@@ -112,19 +112,7 @@ export function AdminDashboardPage() {
             />
           )}
 
-          <Section
-            title="Today attendance"
-            actions={
-              <>
-                <Link to="/admin/reports" className="link-primary text-sm">
-                  Reports →
-                </Link>
-                <Link to="/admin/attendance" className="link-primary text-sm">
-                  Manage attendance →
-                </Link>
-              </>
-            }
-          >
+          <Section title="Today attendance">
             <PaginatedTable
               columns={[
                 { key: 'fullName', label: 'Employee' },

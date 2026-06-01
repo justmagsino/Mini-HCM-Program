@@ -108,7 +108,7 @@ export function AttendancePage() {
       <Section title="History">
         <FilterBar>
           <form onSubmit={handleSubmit(onFilterSubmit)}>
-            <FormField label="From" htmlFor="from" error={errors.from?.message} className="min-w-[140px]">
+            <FormField label="From" htmlFor="from" error={errors.from?.message} className="filter-field">
               <Input
                 id="from"
                 type="date"
@@ -117,7 +117,7 @@ export function AttendancePage() {
                 {...register('from')}
               />
             </FormField>
-            <FormField label="To" htmlFor="to" error={errors.to?.message} className="min-w-[140px]">
+            <FormField label="To" htmlFor="to" error={errors.to?.message} className="filter-field">
               <Input
                 id="to"
                 type="date"
@@ -138,7 +138,7 @@ export function AttendancePage() {
               </Button>
               <Button
                 type="submit"
-                variant="secondary"
+                variant="primary"
                 size="sm"
                 loading={isSubmitting || historyLoading}
                 disabled={isSubmitting || historyLoading}

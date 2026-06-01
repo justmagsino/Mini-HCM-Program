@@ -6,7 +6,8 @@ import { SummaryTable } from '../../components/summary/SummaryTable.jsx';
 import { WeeklyAnalyticsCards } from '../../components/summary/WeeklyAnalyticsCards.jsx';
 import { useSummary } from '../../hooks/useSummary.js';
 import { getCurrentWeekStart, getWeekStartForDate } from '../../utils/dates.js';
-import { formatHours, formatMinutes } from '../../utils/format.js';
+import { formatDateLabel, formatHours, formatMinutes } from '../../utils/format.js';
+import { FilterBar, FilterBarAction } from '../../components/ui/FilterBar.jsx';
 import { useAuth } from '../../hooks/useAuth.js';
 import { getApiErrorMessage } from '../../api/axios.js';
 import { ErrorBanner } from '../../components/ui/ErrorBanner.jsx';
@@ -83,13 +84,13 @@ export function ReportsPage() {
 
       <Section title="Today">
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (
               <StatCardSkeleton key={i} />
             ))}
           </div>
         ) : todaySummary ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
             <StatCard
               label="Regular"
               value={formatHours(todaySummary.totalRegularHours)}
@@ -111,20 +112,16 @@ export function ReportsPage() {
         )}
       </Section>
 
-      <Section title="Weekly">
-        {weekly && !weeklyLoading && (
-          <div className="mb-4">
-            <WeeklyAnalyticsCards totals={weekly.totals} />
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-end justify-start gap-3">
-          {weekly && !weeklyLoading && (
-            <p className="text-sm font-medium text-navy">
-              {weekly.weekStart} – {weekly.weekEnd}
-            </p>
-          )}
-          <FormField label="Week (pick any day)" htmlFor="weekStart" className="min-w-[160px]">
+      <Section
+        title="Weekly"
+        description={
+          weekly && !weeklyLoading
+            ? `${formatDateLabel(weekly.weekStart)} – ${formatDateLabel(weekly.weekEnd)}`
+            : 'Pick any day in the week to load totals.'
+        }
+      >
+        <FilterBar>
+          <FormField label="Week" htmlFor="weekStart" className="filter-field">
             <Input
               id="weekStart"
               type="date"
@@ -134,16 +131,18 @@ export function ReportsPage() {
               onChange={(e) => loadWeekForDate(e.target.value)}
             />
           </FormField>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={weeklyLoading}
-            onClick={goToThisWeek}
-          >
-            This week
-          </Button>
-        </div>
+          <FilterBarAction>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={weeklyLoading}
+              onClick={goToThisWeek}
+            >
+              This week
+            </Button>
+          </FilterBarAction>
+        </FilterBar>
 
         {weekError && (
           <Alert variant={weekError.startsWith('Adjusted') ? 'warning' : 'error'}>{weekError}</Alert>
@@ -151,7 +150,12 @@ export function ReportsPage() {
 
         {weeklyLoading && <LoadingMessage message="Loading weekly report…" inline />}
 
-        {weekly && !weeklyLoading && <SummaryTable items={weekly.days} />}
+        {weekly && !weeklyLoading && (
+          <div className="space-y-4">
+            <WeeklyAnalyticsCards totals={weekly.totals} />
+            <SummaryTable items={weekly.days} />
+          </div>
+        )}
       </Section>
 
       <Section title="Last 31 days">

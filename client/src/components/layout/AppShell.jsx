@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppNavbar } from './AppNavbar.jsx';
+import { MobileFooterNav } from './MobileFooterNav.jsx';
 import { Sidebar } from './Sidebar.jsx';
 
 export function AppShell() {
@@ -63,10 +64,15 @@ export function AppShell() {
           </div>
         )}
 
-        <main id="main-content" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+        <main
+          id="main-content"
+          className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 lg:pb-8"
+        >
           <Outlet />
         </main>
       </div>
+
+      <MobileFooterNav />
     </div>
   );
 }

@@ -41,3 +41,23 @@ export function TableSkeleton({ rows = 5 }) {
     </div>
   );
 }
+
+export function CardListSkeleton({ rows = 4 }) {
+  return (
+    <div className="space-y-3" role="status" aria-label="Loading list">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="card">
+          <div className="card-body space-y-3">
+            <LoadingSkeleton className="h-4 w-2/3" />
+            <div className="grid grid-cols-2 gap-2">
+              <LoadingSkeleton className="h-12 w-full" />
+              <LoadingSkeleton className="h-12 w-full" />
+              <LoadingSkeleton className="h-12 w-full" />
+              <LoadingSkeleton className="h-12 w-full" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
