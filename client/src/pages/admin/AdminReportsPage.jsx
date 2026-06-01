@@ -430,12 +430,6 @@ export function AdminReportsPage() {
                     { key: 'fullName', label: 'Employee' },
                     { key: 'email', label: 'Email' },
                     {
-                      key: 'days',
-                      label: 'Days',
-                      align: 'center',
-                      render: (row) => String(row.daysWithSummary ?? 0),
-                    },
-                    {
                       key: 'reg',
                       label: 'Regular',
                       align: 'center',

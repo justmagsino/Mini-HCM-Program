@@ -115,6 +115,10 @@
     @apply flex w-full flex-wrap items-end gap-3;
   }
 
+  .filter-bar .filter-field {
+    @apply min-w-[10rem] flex-1;
+  }
+
   .filter-bar-action {
     @apply flex flex-row flex-wrap items-end gap-2 justify-end;
   }
@@ -122,6 +126,38 @@
   .filter-bar-action::before {
     content: '';
     @apply mb-1 block h-4;
+  }
+
+  @media (max-width: 1023px) {
+    .filter-bar {
+      @apply flex-col items-stretch;
+    }
+
+    .filter-bar form {
+      @apply flex-col items-stretch;
+    }
+
+    .filter-bar .filter-field {
+      @apply w-full min-w-0 flex-none;
+    }
+
+    .filter-bar .input,
+    .filter-bar select {
+      @apply w-full;
+    }
+
+    .filter-bar-action {
+      @apply w-full justify-stretch;
+    }
+
+    .filter-bar-action::before {
+      content: none;
+      @apply hidden;
+    }
+
+    .filter-bar-action .btn {
+      @apply min-h-9 min-w-0 flex-1;
+    }
   }
 
   .table-panel {
@@ -138,6 +174,25 @@
 
   .table-panel-toolbar .input {
     @apply h-9 border-0 bg-cream shadow-none ring-0 outline-none focus:border-0 focus:ring-2 focus:ring-primary/20;
+  }
+
+  @media (max-width: 1023px) {
+    .table-panel-toolbar .filter-bar {
+      @apply flex-col items-stretch;
+    }
+
+    .table-panel-toolbar .filter-bar .input,
+    .table-panel-toolbar .filter-bar select {
+      @apply w-full min-w-0 flex-none;
+    }
+
+    .table-panel-toolbar .filter-bar-action {
+      @apply w-full;
+    }
+
+    .table-panel-toolbar .filter-bar-action .btn {
+      @apply min-w-0 flex-1;
+    }
   }
 
   .table-panel .table-card {
@@ -158,6 +213,10 @@
 
   .table-pagination {
     @apply flex flex-col gap-3 border-t border-line bg-cream-card px-4 py-3 text-sm text-ink-muted sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .table-pagination-controls {
+    @apply ml-auto flex gap-2;
   }
 
   .table-row-pad td {
@@ -210,5 +269,75 @@
 
   .badge-soft {
     @apply inline-block rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-navy bg-primary-light;
+  }
+
+  .mobile-footer-nav {
+    @apply fixed bottom-0 left-0 right-0 z-30 grid border-t border-line bg-white shadow-[0_-4px_20px_rgba(15,23,42,0.08)] lg:hidden;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .mobile-footer-link {
+    @apply flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 px-1 py-2 text-[0.625rem] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30;
+  }
+
+  .mobile-footer-link-active {
+    @apply text-primary;
+  }
+
+  .mobile-footer-link-inactive {
+    @apply text-ink-muted;
+  }
+
+  .mobile-footer-icon {
+    @apply flex h-7 w-7 items-center justify-center;
+  }
+
+  .mobile-footer-label {
+    @apply max-w-full truncate;
+  }
+
+  .data-card-list {
+    @apply space-y-3;
+  }
+
+  .data-record-card {
+    @apply rounded-xl border border-line bg-white p-4 shadow-card;
+  }
+
+  .data-record-card-header {
+    @apply space-y-3 border-b border-line pb-3;
+  }
+
+  .data-record-card-kicker {
+    @apply text-[0.625rem] font-semibold uppercase tracking-wide text-ink-light;
+  }
+
+  .data-record-card-title {
+    @apply text-sm font-semibold text-navy;
+  }
+
+  .data-record-metrics {
+    @apply grid grid-cols-2 gap-2 pt-3 sm:grid-cols-3;
+  }
+
+  .data-record-metric {
+    @apply rounded-lg bg-cream/80 px-2.5 py-2 text-center;
+  }
+
+  .data-record-metric dt {
+    @apply text-[0.625rem] font-semibold uppercase tracking-wide text-ink-muted;
+  }
+
+  .data-record-metric dd {
+    @apply mt-0.5 text-sm font-semibold tabular-nums text-navy;
+  }
+
+  .data-record-actions {
+    @apply mt-3 border-t border-line pt-3;
+  }
+
+  .table-panel-body .data-card-list {
+    @apply pb-1;
   }
 }

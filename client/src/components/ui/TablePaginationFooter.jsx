@@ -31,7 +31,7 @@ export function TablePaginationFooter({
       <span>
         Showing {pageRowCount} of {total} · Page {page} of {totalPages}
       </span>
-      <div className="flex gap-2">
+      <div className="table-pagination-controls">
         <Button
           variant="secondary"
           size="sm"

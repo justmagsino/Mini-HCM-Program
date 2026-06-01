@@ -1,5 +1,6 @@
 import { EmptyState } from './EmptyState.jsx';
-import { TableSkeleton } from './LoadingSkeleton.jsx';
+import { DataCardList } from './DataCardList.jsx';
+import { CardListSkeleton, TableSkeleton } from './LoadingSkeleton.jsx';
 import { cn } from '../../utils/cn.js';
 
 /** @param {'left' | 'center' | 'right'} [align] */
@@ -43,7 +44,16 @@ export function DataTable({
   footer = null,
 }) {
   if (loading) {
-    return <TableSkeleton />;
+    return (
+      <>
+        <div className="lg:hidden">
+          <CardListSkeleton />
+        </div>
+        <div className="hidden lg:block">
+          <TableSkeleton />
+        </div>
+      </>
+    );
   }
 
   if (!rows.length) {
@@ -52,8 +62,10 @@ export function DataTable({
 
   const padCount = minRows > 0 ? Math.max(0, minRows - rows.length) : 0;
 
+  const mobileCards = <DataCardList columns={columns} rows={rows} rowKey={rowKey} />;
+
   const table = (
-    <div className="table-shell">
+    <div className="table-shell hidden lg:block">
       <table className="table-base">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead className="bg-cream-card">
@@ -92,11 +104,17 @@ export function DataTable({
   if (footer) {
     return (
       <div className="table-card">
+        <div className="lg:hidden">{mobileCards}</div>
         {table}
         {footer}
       </div>
     );
   }
 
-  return table;
+  return (
+    <>
+      <div className="lg:hidden">{mobileCards}</div>
+      {table}
+    </>
+  );
 }
