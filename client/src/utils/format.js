@@ -63,6 +63,19 @@ export function formatMinutes(minutes) {
 }
 
 /**
+ * @param {'employee' | 'admin' | string | null | undefined} role
+ */
+export function formatUserRole(role) {
+  if (role === 'employee') {
+    return 'Employee';
+  }
+  if (role === 'admin') {
+    return 'Admin';
+  }
+  return role ?? '—';
+}
+
+/**
  * @param {'open' | 'closed'} status
  */
 export function formatStatus(status) {

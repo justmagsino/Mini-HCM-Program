@@ -10,6 +10,7 @@ import {
   adminReportDateQuerySchema,
   adminWeeklyReportQuerySchema,
   exceptionsQuerySchema,
+  exportReportQuerySchema,
 } from '../schemas/summary.schema.js';
 import {
   createAttendanceBodySchema,
@@ -63,6 +64,12 @@ router.patch(
   adminWriteLimiter,
   asyncHandler(adminController.patchUserRole),
 );
+router.post(
+  '/users/:uid/reset-password',
+  validate(uidParamSchema),
+  adminWriteLimiter,
+  asyncHandler(adminController.resetUserPassword),
+);
 
 router.get(
   '/attendance',
@@ -101,6 +108,11 @@ router.get(
   '/reports/exceptions',
   validate(exceptionsQuerySchema),
   asyncHandler(reportController.getExceptionsReport),
+);
+router.get(
+  '/reports/export',
+  validate(exportReportQuerySchema),
+  asyncHandler(reportController.getAttendanceExportReport),
 );
 
 export default router;

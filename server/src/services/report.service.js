@@ -9,6 +9,7 @@ import {
   MAX_EMPLOYEE_LIST,
   parseDateString,
 } from '../utils/dates.js';
+import { filterByQuery } from '../utils/adminHelpers.js';
 import {
   aggregateTotals,
   buildWeeklyDays,
@@ -37,16 +38,21 @@ export async function getAdminDailySummary(userId, date) {
 /**
  * Team daily report: one Firestore query by date, joined with users.
  * @param {string} date YYYY-MM-DD
+ * @param {'employee' | 'admin'} [role]
  */
-export async function getTeamDailyReport(date) {
+export async function getTeamDailyReport(date, role) {
   if (!parseDateString(date)) {
     throw new AppError(400, 'VALIDATION_ERROR', 'date must be YYYY-MM-DD');
   }
 
-  const summaries = await dailySummaryRepository.queryByDate(date);
+  let summaries = await dailySummaryRepository.queryByDate(date);
   const userIds = summaries.map((s) => s.userId);
   const users = await usersRepository.getUsersByIds(userIds);
   const userMap = new Map(users.map((u) => [u.uid, u]));
+
+  if (role) {
+    summaries = summaries.filter((s) => userMap.get(s.userId)?.role === role);
+  }
 
   const items = summaries
     .map((summary) => {
@@ -66,7 +72,7 @@ export async function getTeamDailyReport(date) {
  * Team weekly report: single range query, grouped per employee with pagination.
  * @param {string} weekStart Monday YYYY-MM-DD
  * @param {string} timezone
- * @param {{ page?: number; limit?: number }} pagination
+ * @param {{ page?: number; limit?: number; q?: string; role?: 'employee' | 'admin' }} pagination
  */
 export async function getTeamWeeklyReport(weekStart, timezone, pagination = {}) {
   if (!parseDateString(weekStart)) {
@@ -79,24 +85,31 @@ export async function getTeamWeeklyReport(weekStart, timezone, pagination = {}) 
 
   const weekEnd = getWeekEnd(weekStart);
   const page = pagination.page ?? 1;
-  const limit = Math.min(pagination.limit ?? 20, 100);
+  const limit = Math.min(pagination.limit ?? 10, 100);
 
-  // Include all profiles (employee + admin) so small teams and solo-admin setups still appear in reports.
-  const employees = await usersRepository.listUsers({ limit: MAX_EMPLOYEE_LIST });
-  const total = employees.length;
+  const listOptions = { limit: MAX_EMPLOYEE_LIST };
+  if (pagination.role) {
+    listOptions.role = pagination.role;
+  }
+
+  let users = await usersRepository.listUsers(listOptions);
+  users = filterByQuery(users, pagination.q);
+  const total = users.length;
   const start = (page - 1) * limit;
-  const pageEmployees = employees.slice(start, start + limit);
+  const pageUsers = users.slice(start, start + limit);
+  const allowedUserIds = new Set(users.map((u) => u.uid));
 
   const weekDates = listDateStringsInclusive(weekStart, weekEnd);
-  const pageSummaryIds = pageEmployees.flatMap((user) =>
+  const pageSummaryIds = pageUsers.flatMap((user) =>
     weekDates.map((d) => buildDailySummaryId(user.uid, d)),
   );
   const pageSummaries = await dailySummaryRepository.getByIds(pageSummaryIds);
   const byUser = groupSummariesByUserId(pageSummaries);
 
   const allWeekSummaries = await dailySummaryRepository.queryByDateRange(weekStart, weekEnd);
+  const totalsSummaries = allWeekSummaries.filter((s) => allowedUserIds.has(s.userId));
 
-  const items = pageEmployees.map((user) => {
+  const items = pageUsers.map((user) => {
     const userSummaries = byUser.get(user.uid) ?? [];
     const days = buildWeeklyDays(weekStart, user.uid, userSummaries);
     const totals = aggregateTotals(userSummaries);
@@ -119,7 +132,7 @@ export async function getTeamWeeklyReport(weekStart, timezone, pagination = {}) 
     page,
     limit,
     total,
-    totals: aggregateTotals(allWeekSummaries),
+    totals: aggregateTotals(totalsSummaries),
   };
 }
 
@@ -127,8 +140,9 @@ export async function getTeamWeeklyReport(weekStart, timezone, pagination = {}) 
  * Late / undertime exceptions from dailySummary in range.
  * @param {string} from
  * @param {string} to
+ * @param {'employee' | 'admin'} [role]
  */
-export async function getExceptionsReport(from, to) {
+export async function getExceptionsReport(from, to, role) {
   const range = assertValidHistoryRange(from, to);
   if (!range.ok) {
     const code = range.message.includes('exceed') ? 'RANGE_TOO_LARGE' : 'VALIDATION_ERROR';
@@ -145,7 +159,7 @@ export async function getExceptionsReport(from, to) {
   const users = await usersRepository.getUsersByIds(flagged.map((s) => s.userId));
   const userMap = new Map(users.map((u) => [u.uid, u]));
 
-  const items = flagged
+  let items = flagged
     .map((row) => ({
       userId: row.userId,
       fullName: userMap.get(row.userId)?.fullName ?? 'Unknown',
@@ -155,5 +169,54 @@ export async function getExceptionsReport(from, to) {
     }))
     .sort((a, b) => a.date.localeCompare(b.date) || a.fullName.localeCompare(b.fullName));
 
+  if (role) {
+    items = items.filter((row) => userMap.get(row.userId)?.role === role);
+  }
+
   return { items, from: range.from, to: range.to };
+}
+
+/**
+ * Daily summary rows for Excel export (inclusive date range).
+ * @param {string} from
+ * @param {string} to
+ * @param {'employee' | 'admin'} [role]
+ */
+export async function getAttendanceExportReport(from, to, role) {
+  const range = assertValidHistoryRange(from, to);
+  if (!range.ok) {
+    const code = range.message.includes('exceed') ? 'RANGE_TOO_LARGE' : 'VALIDATION_ERROR';
+    throw new AppError(400, code, range.message);
+  }
+
+  const summaries = await dailySummaryRepository.queryByDateRange(range.from, range.to);
+  const userIds = [...new Set(summaries.map((s) => s.userId))];
+  const users = await usersRepository.getUsersByIds(userIds);
+  const userMap = new Map(users.map((u) => [u.uid, u]));
+
+  let items = summaries.map((summary) => {
+    const user = userMap.get(summary.userId);
+    return {
+      date: summary.date,
+      userId: summary.userId,
+      fullName: user?.fullName ?? 'Unknown',
+      email: user?.email ?? '',
+      role: user?.role ?? '',
+      totalRegularHours: summary.totalRegularHours,
+      totalOvertimeHours: summary.totalOvertimeHours,
+      totalNightDifferentialHours: summary.totalNightDifferentialHours,
+      totalLateMinutes: summary.totalLateMinutes,
+      totalUndertimeMinutes: summary.totalUndertimeMinutes,
+    };
+  });
+
+  if (role) {
+    items = items.filter((row) => row.role === role);
+  }
+
+  items.sort(
+    (a, b) => a.date.localeCompare(b.date) || a.fullName.localeCompare(b.fullName),
+  );
+
+  return { from: range.from, to: range.to, items };
 }

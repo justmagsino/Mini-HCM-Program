@@ -13,7 +13,9 @@ import { FormField } from '../../components/ui/FormField.jsx';
 import { Input } from '../../components/ui/Input.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard.js';
+import { getWorkDateForTimezone } from '../../utils/dates.js';
 import { formatHours, formatMinutes, formatTime } from '../../utils/format.js';
+import { ReportExportBar } from '../../components/admin/ReportExportBar.jsx';
 
 const TeamOvertimeChart = lazy(() =>
   import('../../components/charts/TeamOvertimeChart.jsx').then((m) => ({
@@ -31,10 +33,10 @@ export function AdminDashboardPage() {
     <PageContainer>
       <PageHeader
         title="Admin dashboard"
-        description="Team KPIs, today's roster, and weekly overtime."
+        description="KPIs, today's roster, and weekly overtime."
         actions={
           <>
-            <FormField htmlFor="dashboard-date" className="mb-0">
+            <FormField htmlFor="dashboard-date" className="mb-0 shrink-0">
               <Input
                 id="dashboard-date"
                 type="date"
@@ -44,7 +46,15 @@ export function AdminDashboardPage() {
                 aria-label="Dashboard date"
               />
             </FormField>
-            <Button variant="secondary" size="sm" onClick={retry}>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="self-center"
+              onClick={() => setDate(getWorkDateForTimezone(new Date(), timezone))}
+            >
+              Today
+            </Button>
+            <Button variant="secondary" size="sm" className="self-center" onClick={retry}>
               Refresh
             </Button>
           </>
@@ -52,6 +62,8 @@ export function AdminDashboardPage() {
       />
 
       <ErrorBanner message={error} onRetry={retry} />
+
+      <ReportExportBar />
 
       {loading ? (
         <>
@@ -74,8 +86,8 @@ export function AdminDashboardPage() {
               />
               <StatCard label="Punched in now" value={String(kpis.punchedInNow)} />
               <StatCard label="Absent today" value={String(kpis.absentToday)} />
-              <StatCard label="Team OT (today)" value={formatHours(kpis.totalOvertimeHours)} />
-              <StatCard label="Team late (today)" value={formatMinutes(kpis.totalLateMinutes)} />
+              <StatCard label="OT (today)" value={formatHours(kpis.totalOvertimeHours)} />
+              <StatCard label="Late (today)" value={formatMinutes(kpis.totalLateMinutes)} />
             </div>
           )}
 
@@ -85,7 +97,7 @@ export function AdminDashboardPage() {
             </Suspense>
           ) : (
             <EmptyState
-              title="No team overtime this week"
+              title="No overtime this week"
               description="OT chart fills as hours are logged."
             />
           )}
@@ -104,39 +116,50 @@ export function AdminDashboardPage() {
                 {
                   key: 'status',
                   label: 'Status',
-                  render: (row) => <AttendanceStatusBadge status={row.status} />,
+                  align: 'center',
+                  render: (row) => (
+                    <div className="flex justify-center">
+                      <AttendanceStatusBadge status={row.status} />
+                    </div>
+                  ),
                 },
                 {
                   key: 'timeIn',
                   label: 'In',
+                  align: 'center',
                   render: (row) =>
                     row.attendance ? formatTime(row.attendance.timeIn, timezone) : '—',
                 },
                 {
                   key: 'timeOut',
                   label: 'Out',
+                  align: 'center',
                   render: (row) =>
                     row.attendance ? formatTime(row.attendance.timeOut, timezone) : '—',
                 },
                 {
                   key: 'edit',
                   label: 'Actions',
-                  render: (row) =>
-                    row.status === 'absent' ? (
-                      <Link
-                        to={`/admin/attendance/edit?userId=${row.userId}`}
-                        className="link-primary text-sm"
-                      >
-                        Add
-                      </Link>
-                    ) : (
-                      <Link
-                        to={`/admin/attendance/${row.userId}/${date}`}
-                        className="link-primary text-sm"
-                      >
-                        Edit
-                      </Link>
-                    ),
+                  align: 'center',
+                  render: (row) => (
+                    <div className="flex justify-center">
+                      {row.status === 'absent' ? (
+                        <Link
+                          to={`/admin/attendance/edit?userId=${row.userId}`}
+                          className="link-primary text-sm"
+                        >
+                          Add
+                        </Link>
+                      ) : (
+                        <Link
+                          to={`/admin/attendance/${row.userId}/${date}`}
+                          className="link-primary text-sm"
+                        >
+                          Edit
+                        </Link>
+                      )}
+                    </div>
+                  ),
                 },
               ]}
               rows={roster}
@@ -147,7 +170,7 @@ export function AdminDashboardPage() {
           </Section>
 
           <Section
-            title="Exceptions this week"
+            title="Tardiness this week"
             actions={
               <Link to="/admin/reports" className="link-primary text-sm">
                 Reports →
@@ -162,24 +185,22 @@ export function AdminDashboardPage() {
                   {
                     key: 'totalLateMinutes',
                     label: 'Late',
-                    align: 'right',
                     render: (row) => formatMinutes(row.totalLateMinutes),
                   },
                   {
                     key: 'totalUndertimeMinutes',
                     label: 'Undertime',
-                    align: 'right',
                     render: (row) => formatMinutes(row.totalUndertimeMinutes),
                   },
                 ]}
                 rows={exceptions}
                 rowKey={(row) => `${row.userId}_${row.date}`}
-                emptyTitle="No exceptions"
+                emptyTitle="No tardiness"
                 emptyMessage="No late/undertime alerts this week."
               />
             ) : (
               <EmptyState
-                title="No exceptions"
+                title="No tardiness"
                 description="No late/undertime alerts this week."
               />
             )}

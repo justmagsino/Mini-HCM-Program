@@ -48,6 +48,8 @@ const serverEnvSchema = z.object({
     .transform((value) => value === 'true'),
   LATE_ALERT_MINUTES: z.coerce.number().int().nonnegative().default(15),
   UNDERTIME_ALERT_MINUTES: z.coerce.number().int().nonnegative().default(30),
+  /** Password set by POST /api/admin/users/:uid/reset-password (demo / local admin tool). */
+  ADMIN_RESET_PASSWORD: z.string().min(6).default('password'),
 });
 
 /**

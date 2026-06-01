@@ -20,6 +20,9 @@ const AttendancePage = lazy(() =>
 const ReportsPage = lazy(() =>
   import('../pages/employee/ReportsPage.jsx').then((m) => ({ default: m.ReportsPage })),
 );
+const ProfilePage = lazy(() =>
+  import('../pages/profile/ProfilePage.jsx').then((m) => ({ default: m.ProfilePage })),
+);
 const AdminDashboardPage = lazy(() =>
   import('../pages/admin/AdminDashboardPage.jsx').then((m) => ({ default: m.AdminDashboardPage })),
 );
@@ -86,6 +89,14 @@ export function AppRoutes() {
             element={
               <Lazy>
                 <ReportsPage />
+              </Lazy>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <Lazy>
+                <ProfilePage />
               </Lazy>
             }
           />

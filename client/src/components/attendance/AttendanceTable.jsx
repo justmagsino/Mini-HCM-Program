@@ -1,6 +1,7 @@
 import { formatDateLabel, formatHours, formatMinutes, formatStatus, formatTime } from '../../utils/format.js';
 import { DataTable } from '../ui/DataTable.jsx';
 import { AttendanceStatusBadge } from './AttendanceStatusBadge.jsx';
+import { TardinessTags } from './TardinessTags.jsx';
 
 /**
  * @param {{
@@ -37,24 +38,36 @@ export function AttendanceTable({ items, timezone, loading = false }) {
         {
           key: 'status',
           label: 'Status',
-          render: (row) => <AttendanceStatusBadge status={row.status} showAbsentLabel={false} />,
+          render: (row) => (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <AttendanceStatusBadge status={row.status} showAbsentLabel={false} />
+              <TardinessTags
+                status={row.status}
+                lateMinutes={row.lateMinutes}
+                undertimeMinutes={row.undertimeMinutes}
+                regularHours={row.regularHours}
+              />
+            </div>
+          ),
+        },
+        {
+          key: 'undertime',
+          label: 'Undertime',
+          render: (row) => formatMinutes(row.undertimeMinutes),
         },
         {
           key: 'regular',
           label: 'Regular',
-          align: 'right',
           render: (row) => formatHours(row.regularHours),
         },
         {
           key: 'ot',
           label: 'OT',
-          align: 'right',
           render: (row) => formatHours(row.overtimeHours),
         },
         {
           key: 'late',
           label: 'Late',
-          align: 'right',
           render: (row) => formatMinutes(row.lateMinutes),
         },
       ]}

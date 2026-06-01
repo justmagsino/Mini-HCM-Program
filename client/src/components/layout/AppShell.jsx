@@ -33,7 +33,7 @@ export function AppShell() {
   }, [mobileOpen, closeMobile]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-cream">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-primary/30"
@@ -43,7 +43,7 @@ export function AppShell() {
       <AppNavbar onMenuClick={() => setMobileOpen(true)} />
 
       <div className="flex">
-        <div className="hidden w-56 shrink-0 lg:block">
+        <div className="hidden w-60 shrink-0 lg:block">
           <div className="sticky top-14 h-[calc(100vh-3.5rem)]">
             <Sidebar />
           </div>
@@ -53,11 +53,11 @@ export function AppShell() {
           <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
             <button
               type="button"
-              className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px]"
+              className="absolute inset-0 bg-navy-deep/50 backdrop-blur-[1px]"
               aria-label="Close menu"
               onClick={closeMobile}
             />
-            <div ref={drawerRef} className="absolute left-0 top-0 h-full w-72 max-w-[85vw] shadow-2xl">
+            <div ref={drawerRef} className="absolute left-0 top-0 h-full w-64 max-w-[85vw] shadow-2xl">
               <Sidebar onNavigate={closeMobile} onClose={closeMobile} />
             </div>
           </div>

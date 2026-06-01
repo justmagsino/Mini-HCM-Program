@@ -24,6 +24,12 @@ export async function patchUserRole(req, res) {
   return res.status(200).json(user);
 }
 
+export async function resetUserPassword(req, res) {
+  const { uid } = req.validated.params;
+  const result = await adminService.resetUserPassword(req.user.uid, uid);
+  return res.status(200).json(result);
+}
+
 export async function searchAttendance(req, res) {
   const result = await adminService.searchAttendance(req.validated.query);
   return res.status(200).json(result);

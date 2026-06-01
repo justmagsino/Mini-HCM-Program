@@ -7,3 +7,11 @@ export const registerBodySchema = z.object({
     })
     .strict(),
 });
+
+export const patchProfileBodySchema = z.object({
+  body: z
+    .object({
+      fullName: z.string().trim().min(2).max(100),
+    })
+    .strict(),
+});

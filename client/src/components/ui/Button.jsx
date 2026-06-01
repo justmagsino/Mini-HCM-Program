@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { cn } from '../../utils/cn.js';
 
 const variants = {
@@ -22,19 +23,23 @@ const sizes = {
  *   children: import('react').ReactNode;
  * } & import('react').ButtonHTMLAttributes<HTMLButtonElement>} props
  */
-export function Button({
-  variant = 'primary',
-  size = 'md',
-  fullWidth = false,
-  loading = false,
-  className,
-  children,
-  disabled,
-  type = 'button',
-  ...rest
-}) {
+export const Button = forwardRef(function Button(
+  {
+    variant = 'primary',
+    size = 'md',
+    fullWidth = false,
+    loading = false,
+    className,
+    children,
+    disabled,
+    type = 'button',
+    ...rest
+  },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
@@ -55,4 +60,4 @@ export function Button({
       {children}
     </button>
   );
-}
+});

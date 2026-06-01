@@ -5,7 +5,7 @@ import { StatCard } from '../../components/ui/StatCard.jsx';
 import { SummaryTable } from '../../components/summary/SummaryTable.jsx';
 import { WeeklyAnalyticsCards } from '../../components/summary/WeeklyAnalyticsCards.jsx';
 import { useSummary } from '../../hooks/useSummary.js';
-import { getWeekStartForDate } from '../../utils/dates.js';
+import { getCurrentWeekStart, getWeekStartForDate } from '../../utils/dates.js';
 import { formatHours, formatMinutes } from '../../utils/format.js';
 import { useAuth } from '../../hooks/useAuth.js';
 import { getApiErrorMessage } from '../../api/axios.js';
@@ -38,15 +38,27 @@ export function ReportsPage() {
   const [weekInput, setWeekInput] = useState('');
   const [weekError, setWeekError] = useState('');
 
-  const handleWeekApply = async () => {
-    if (!weekInput || !profile) {
+  const loadWeekForDate = async (pickedDate) => {
+    if (!pickedDate || !profile) {
       return;
     }
     setWeekError('');
-    const monday = getWeekStartForDate(weekInput, timezone);
-    if (monday !== weekInput && weekInput !== weekStart) {
+    const monday = getWeekStartForDate(pickedDate, timezone);
+    setWeekInput(monday);
+    if (monday !== pickedDate) {
       setWeekError(`Adjusted to week starting Monday: ${monday}`);
     }
+    try {
+      await loadWeekly(monday);
+    } catch (err) {
+      setWeekError(getApiErrorMessage(err));
+    }
+  };
+
+  const goToThisWeek = async () => {
+    const monday = getCurrentWeekStart(timezone);
+    setWeekError('');
+    setWeekInput(monday);
     try {
       await loadWeekly(monday);
     } catch (err) {
@@ -101,17 +113,18 @@ export function ReportsPage() {
               type="date"
               inputSize="sm"
               value={weekInput || weekStart}
-              onChange={(e) => setWeekInput(e.target.value)}
+              disabled={weeklyLoading}
+              onChange={(e) => loadWeekForDate(e.target.value)}
             />
           </FormField>
           <Button
             type="button"
             variant="secondary"
             size="sm"
-            loading={weeklyLoading}
-            onClick={handleWeekApply}
+            disabled={weeklyLoading}
+            onClick={goToThisWeek}
           >
-            Apply
+            This week
           </Button>
         </FilterBar>
 

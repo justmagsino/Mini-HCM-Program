@@ -8,7 +8,6 @@ import { ErrorBanner } from '../../components/ui/ErrorBanner.jsx';
 import { FilterBar } from '../../components/ui/FilterBar.jsx';
 import { Input } from '../../components/ui/Input.jsx';
 import { Select } from '../../components/ui/Select.jsx';
-import { Button } from '../../components/ui/Button.jsx';
 import * as adminApi from '../../api/admin.api.js';
 import { getApiErrorMessage } from '../../api/axios.js';
 import { getWorkDateForTimezone } from '../../utils/dates.js';
@@ -16,15 +15,18 @@ import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { useProfileTimezone } from '../../hooks/useProfileTimezone.js';
 import { formatTime } from '../../utils/format.js';
 
+const PAGE_SIZE = 10;
+
 export function AdminAttendancePage() {
   const timezone = useProfileTimezone();
 
   const [date, setDate] = useState(() => getWorkDateForTimezone(new Date(), timezone));
   const [status, setStatus] = useState('');
+  const [role, setRole] = useState('employee');
   const [qInput, setQInput] = useState('');
   const q = useDebouncedValue(qInput);
   const [page, setPage] = useState(1);
-  const [data, setData] = useState({ items: [], total: 0, limit: 50 });
+  const [data, setData] = useState({ items: [], total: 0, limit: PAGE_SIZE });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -35,9 +37,10 @@ export function AdminAttendancePage() {
       const result = await adminApi.searchAttendance({
         date,
         status: status || undefined,
+        role: role || undefined,
         q: q || undefined,
         page,
-        limit: 50,
+        limit: PAGE_SIZE,
       });
       setData(result);
     } catch (err) {
@@ -45,7 +48,7 @@ export function AdminAttendancePage() {
     } finally {
       setLoading(false);
     }
-  }, [date, status, q, page]);
+  }, [date, status, role, q, page]);
 
   useEffect(() => {
     load();
@@ -73,6 +76,32 @@ export function AdminAttendancePage() {
 
       <FilterBar>
         <Input
+          type="search"
+          placeholder="Filter by name or email"
+          value={qInput}
+          onChange={(e) => {
+            setPage(1);
+            setQInput(e.target.value);
+          }}
+          inputSize="sm"
+          className="min-w-[180px] flex-1"
+          aria-label="Search attendance"
+        />
+        <Select
+          value={role}
+          onChange={(e) => {
+            setPage(1);
+            setRole(e.target.value);
+          }}
+          inputSize="sm"
+          className="w-auto min-w-[9rem] shrink-0"
+          aria-label="Filter by role"
+        >
+          <option value="">All</option>
+          <option value="employee">Employee</option>
+          <option value="admin">Admin</option>
+        </Select>
+        <Input
           type="date"
           value={date}
           onChange={(e) => {
@@ -80,7 +109,7 @@ export function AdminAttendancePage() {
             setDate(e.target.value);
           }}
           inputSize="sm"
-          className="w-auto"
+          className="w-auto shrink-0"
           aria-label="Filter by date"
         />
         <Select
@@ -90,60 +119,54 @@ export function AdminAttendancePage() {
             setStatus(e.target.value);
           }}
           inputSize="sm"
-          className="w-auto min-w-[10rem]"
+          className="w-auto min-w-[10rem] shrink-0"
           aria-label="Filter by status"
         >
           <option value="">All statuses</option>
           <option value="open">Open</option>
           <option value="closed">Closed</option>
         </Select>
-        <Input
-          type="search"
-          placeholder="Filter by name or email"
-          value={qInput}
-          onChange={(e) => {
-            setPage(1);
-            setQInput(e.target.value);
-          }}
-          className="min-w-[180px] flex-1"
-          aria-label="Search attendance"
-        />
-        <Button type="button" variant="secondary" size="sm" onClick={load}>
-          Apply
-        </Button>
       </FilterBar>
 
       <PaginatedTable
         columns={[
           { key: 'fullName', label: 'Employee' },
-          { key: 'date', label: 'Date' },
+          { key: 'date', label: 'Date', align: 'center' },
           {
             key: 'timeIn',
             label: 'In',
+            align: 'center',
             render: (row) => formatTime(row.timeIn, timezone),
           },
           {
             key: 'timeOut',
             label: 'Out',
+            align: 'center',
             render: (row) => formatTime(row.timeOut, timezone),
           },
           {
             key: 'status',
             label: 'Status',
+            align: 'center',
             render: (row) => (
-              <AttendanceStatusBadge status={row.status} showAbsentLabel={false} />
+              <div className="flex justify-center">
+                <AttendanceStatusBadge status={row.status} showAbsentLabel={false} />
+              </div>
             ),
           },
           {
             key: 'actions',
             label: 'Actions',
+            align: 'center',
             render: (row) => (
-              <Link
-                to={`/admin/attendance/${row.userId}/${row.date}`}
-                className="link-primary text-sm"
-              >
-                Edit
-              </Link>
+              <div className="flex justify-center">
+                <Link
+                  to={`/admin/attendance/${row.userId}/${row.date}`}
+                  className="link-primary text-sm"
+                >
+                  Edit
+                </Link>
+              </div>
             ),
           },
         ]}

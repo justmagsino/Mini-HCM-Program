@@ -12,7 +12,7 @@ import { FormField } from '../../components/ui/FormField.jsx';
 import { Input } from '../../components/ui/Input.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
-import { FilterBar } from '../../components/ui/FilterBar.jsx';
+import { FilterBar, FilterBarAction } from '../../components/ui/FilterBar.jsx';
 
 export function AttendancePage() {
   const {
@@ -90,10 +90,7 @@ export function AttendancePage() {
 
       <Section title="History">
         <FilterBar>
-          <form
-            onSubmit={handleSubmit(onFilterSubmit)}
-            className="flex w-full flex-wrap items-end gap-3"
-          >
+          <form onSubmit={handleSubmit(onFilterSubmit)}>
             <FormField label="From" htmlFor="from" error={errors.from?.message} className="min-w-[140px]">
               <Input
                 id="from"
@@ -112,15 +109,17 @@ export function AttendancePage() {
                 {...register('to')}
               />
             </FormField>
-            <Button
-              type="submit"
-              variant="secondary"
-              size="sm"
-              loading={isSubmitting || historyLoading}
-              disabled={isSubmitting || historyLoading}
-            >
-              Apply
-            </Button>
+            <FilterBarAction>
+              <Button
+                type="submit"
+                variant="secondary"
+                size="sm"
+                loading={isSubmitting || historyLoading}
+                disabled={isSubmitting || historyLoading}
+              >
+                Apply
+              </Button>
+            </FilterBarAction>
           </form>
         </FilterBar>
 

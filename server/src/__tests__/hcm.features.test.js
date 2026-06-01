@@ -58,6 +58,21 @@ describe('Mini HCM feature verification', () => {
       assert.equal(res.body.error.code, 'UNAUTHORIZED');
       logPass('invalid login fails');
     });
+
+    it('user can update display name', async () => {
+      const token = harness.bearer('emp-001');
+      const res = await harness.request('PATCH', '/api/auth/me', {
+        token,
+        body: { fullName: 'Employee Renamed' },
+      });
+
+      assert.equal(res.status, 200);
+      assert.equal(res.body.fullName, 'Employee Renamed');
+
+      const me = await harness.request('GET', '/api/auth/me', { token });
+      assert.equal(me.body.fullName, 'Employee Renamed');
+      logPass('user can update display name');
+    });
   });
 
   describe('ATTENDANCE', () => {

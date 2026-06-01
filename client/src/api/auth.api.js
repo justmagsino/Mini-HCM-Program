@@ -13,6 +13,14 @@ export async function getMe() {
   return data;
 }
 
+/**
+ * @param {{ fullName: string }} body
+ */
+export async function updateProfile(body) {
+  const { data } = await api.patch('/auth/me', body);
+  return data;
+}
+
 export async function logout() {
   await api.post('/auth/logout');
 }

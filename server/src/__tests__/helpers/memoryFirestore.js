@@ -290,6 +290,15 @@ export function createMemoryFirestore(users = []) {
       tokens.set(`token-${user.uid}`, user);
       return `token-${user.uid}`;
     },
+    async updateUser(uid) {
+      const entry = [...tokens.entries()].find(([, u]) => u.uid === uid);
+      if (!entry) {
+        const err = new Error('User not found');
+        err.code = 'auth/user-not-found';
+        throw err;
+      }
+      return { uid };
+    },
   };
 
   return { db, adminAuth, store };

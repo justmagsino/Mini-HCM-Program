@@ -25,6 +25,8 @@ export function getFirebaseAuthErrorMessage(error) {
       return 'Invalid email or password.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Try again later.';
+    case 'auth/requires-recent-login':
+      return 'For security, sign out and sign in again, then change your password.';
     default:
       return code ? `Authentication failed (${code}).` : 'Authentication failed. Please try again.';
   }

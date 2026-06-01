@@ -10,6 +10,11 @@ export async function getMe(req, res) {
   return res.status(200).json(req.user);
 }
 
+export async function patchMe(req, res) {
+  const user = await authService.updateProfile(req.user.uid, req.validated.body);
+  return res.status(200).json(user);
+}
+
 export async function logout(req, res) {
   return res.status(204).send();
 }

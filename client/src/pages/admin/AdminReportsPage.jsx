@@ -14,149 +14,305 @@ import {
 } from '../../utils/dates.js';
 import { historyDateRangeSchema } from '../../schemas/common.schema.js';
 import { useProfileTimezone } from '../../hooks/useProfileTimezone.js';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { ErrorBanner } from '../../components/ui/ErrorBanner.jsx';
 import { LoadingMessage } from '../../components/ui/LoadingMessage.jsx';
 import { formatHours, formatMinutes } from '../../utils/format.js';
+import { aggregateSummaryTotals } from '../../utils/summaryTotals.js';
 import { Section } from '../../components/ui/Section.jsx';
 import { FilterBar } from '../../components/ui/FilterBar.jsx';
 import { Input } from '../../components/ui/Input.jsx';
+import { Select } from '../../components/ui/Select.jsx';
 import { Button } from '../../components/ui/Button.jsx';
+import { ReportExportBar } from '../../components/admin/ReportExportBar.jsx';
+
+const DAILY_PAGE_SIZE = 10;
+const EXCEPTIONS_PAGE_SIZE = 10;
+
+/** @param {{ value: string; onChange: (value: string) => void }} props */
+function ReportRoleFilter({ value, onChange }) {
+  return (
+    <Select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      inputSize="sm"
+      className="w-auto min-w-[9rem] shrink-0"
+      aria-label="Filter by role"
+    >
+      <option value="">All</option>
+      <option value="employee">Employee</option>
+      <option value="admin">Admin</option>
+    </Select>
+  );
+}
+
+function filterByNameOrEmail(items, query) {
+  if (!query?.trim()) {
+    return items;
+  }
+  const needle = query.trim().toLowerCase();
+  return items.filter(
+    (row) =>
+      row.fullName?.toLowerCase().includes(needle) ||
+      row.email?.toLowerCase().includes(needle),
+  );
+}
 
 export function AdminReportsPage() {
   const timezone = useProfileTimezone();
 
   const [date, setDate] = useState(() => getWorkDateForTimezone(new Date(), timezone));
   const [weekStart, setWeekStart] = useState(() => getCurrentWeekStart(timezone));
-  const [q, setQ] = useState('');
+  const [role, setRole] = useState('employee');
+  const [dailyQ, setDailyQ] = useState('');
+  const [weeklyQInput, setWeeklyQInput] = useState('');
+  const weeklyQ = useDebouncedValue(weeklyQInput);
+  const [excQ, setExcQ] = useState('');
   const [excFrom, setExcFrom] = useState(() => getCurrentWeekStart(timezone));
   const [excTo, setExcTo] = useState(() => getWorkDateForTimezone(new Date(), timezone));
 
   const [dailyReport, setDailyReport] = useState(null);
   const [weeklyReport, setWeeklyReport] = useState(null);
   const [exceptions, setExceptions] = useState([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [dailyPage, setDailyPage] = useState(1);
+  const [weeklyPage, setWeeklyPage] = useState(1);
+  const [excPage, setExcPage] = useState(1);
 
-  const loadReports = useCallback(async () => {
+  const [dailyLoading, setDailyLoading] = useState(true);
+  const [weeklyLoading, setWeeklyLoading] = useState(true);
+  const [exceptionsLoading, setExceptionsLoading] = useState(true);
+
+  const [dailyError, setDailyError] = useState('');
+  const [weeklyError, setWeeklyError] = useState('');
+  const [exceptionsError, setExceptionsError] = useState('');
+
+  const loadDaily = useCallback(async () => {
+    setDailyLoading(true);
+    setDailyError('');
+    try {
+      const daily = await adminApi.getTeamDailyReport({
+        date,
+        role: role || undefined,
+      });
+      setDailyReport(daily);
+    } catch (err) {
+      setDailyError(getApiErrorMessage(err));
+    } finally {
+      setDailyLoading(false);
+    }
+  }, [date, role]);
+
+  const loadWeekly = useCallback(async () => {
+    setWeeklyLoading(true);
+    setWeeklyError('');
+    try {
+      const weekly = await adminApi.getTeamWeeklyReport({
+        weekStart,
+        page: weeklyPage,
+        limit: 10,
+        q: weeklyQ || undefined,
+        role: role || undefined,
+      });
+      setWeeklyReport(weekly);
+    } catch (err) {
+      setWeeklyError(getApiErrorMessage(err));
+    } finally {
+      setWeeklyLoading(false);
+    }
+  }, [weekStart, weeklyPage, weeklyQ, role]);
+
+  const loadExceptions = useCallback(async () => {
     const rangeCheck = historyDateRangeSchema.safeParse({ from: excFrom, to: excTo });
     if (!rangeCheck.success) {
-      setError(rangeCheck.error.errors[0]?.message ?? 'Invalid date range');
+      setExceptionsError(rangeCheck.error.errors[0]?.message ?? 'Invalid date range');
       return;
     }
 
-    setLoading(true);
-    setError('');
-    setDailyReport(null);
-    setWeeklyReport(null);
-    setExceptions([]);
+    setExceptionsLoading(true);
+    setExceptionsError('');
     try {
-      const [daily, weekly, exc] = await Promise.all([
-        adminApi.getTeamDailyReport(date),
-        adminApi.getTeamWeeklyReport({ weekStart, page, limit: 20 }),
-        adminApi.getExceptionsReport({ from: excFrom, to: excTo }),
-      ]);
-      setDailyReport(daily);
-      setWeeklyReport(weekly);
+      const exc = await adminApi.getExceptionsReport({
+        from: excFrom,
+        to: excTo,
+        role: role || undefined,
+      });
       setExceptions(exc);
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      setExceptionsError(getApiErrorMessage(err));
     } finally {
-      setLoading(false);
+      setExceptionsLoading(false);
     }
-  }, [date, weekStart, page, excFrom, excTo]);
+  }, [excFrom, excTo, role]);
 
   useEffect(() => {
-    loadReports();
-  }, [loadReports]);
+    loadDaily();
+  }, [loadDaily]);
 
-  const filteredDailyItems = useMemo(() => {
-    if (!dailyReport?.items) {
-      return [];
-    }
-    if (!q.trim()) {
-      return dailyReport.items;
-    }
-    const needle = q.trim().toLowerCase();
-    return dailyReport.items.filter(
-      (row) =>
-        row.fullName?.toLowerCase().includes(needle) ||
-        row.email?.toLowerCase().includes(needle),
-    );
-  }, [dailyReport, q]);
+  useEffect(() => {
+    loadWeekly();
+  }, [loadWeekly]);
+
+  useEffect(() => {
+    loadExceptions();
+  }, [loadExceptions]);
+
+  const today = useMemo(
+    () => getWorkDateForTimezone(new Date(), timezone),
+    [timezone],
+  );
+
+  const thisWeekStart = useMemo(
+    () => getCurrentWeekStart(timezone),
+    [timezone],
+  );
+
+  const onRoleChange = (nextRole) => {
+    setRole(nextRole);
+    setDailyPage(1);
+    setWeeklyPage(1);
+    setExcPage(1);
+  };
+
+  const goToToday = () => {
+    setDate(today);
+    setDailyPage(1);
+  };
+
+  const goToThisWeek = () => {
+    setWeekStart(thisWeekStart);
+    setWeeklyPage(1);
+  };
+
+  const goToExceptionsThisWeek = () => {
+    setExcFrom(thisWeekStart);
+    setExcTo(today);
+    setExcPage(1);
+  };
+
+  const filteredDailyItems = useMemo(
+    () => filterByNameOrEmail(dailyReport?.items ?? [], dailyQ),
+    [dailyReport, dailyQ],
+  );
+
+  const dailyDisplayTotals = useMemo(
+    () => aggregateSummaryTotals(filteredDailyItems),
+    [filteredDailyItems],
+  );
+
+  const filteredExceptions = useMemo(
+    () => filterByNameOrEmail(exceptions, excQ),
+    [exceptions, excQ],
+  );
+
+  const paginatedExceptions = useMemo(() => {
+    const start = (excPage - 1) * EXCEPTIONS_PAGE_SIZE;
+    return filteredExceptions.slice(start, start + EXCEPTIONS_PAGE_SIZE);
+  }, [filteredExceptions, excPage]);
 
   return (
     <PageContainer>
       <PageHeader
         title="Daily & weekly reports"
-        description="Team summaries with regular, OT, night differential, late, and undertime."
+        description="Summaries with regular, OT, night differential, late, and undertime."
       />
 
-      <ErrorBanner message={error} onRetry={loadReports} />
+      <ReportExportBar defaultRole={role} />
 
-      <Section title="Daily team summary">
+      <Section title="Daily summary">
+        <ErrorBanner message={dailyError} onRetry={loadDaily} />
         <FilterBar>
-          <Input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            inputSize="sm"
-            className="w-auto"
-            aria-label="Report date"
-          />
           <Input
             type="search"
             placeholder="Filter by name or email"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={dailyQ}
+            onChange={(e) => {
+              setDailyQ(e.target.value);
+              setDailyPage(1);
+            }}
+            inputSize="sm"
             className="min-w-[200px] flex-1"
             aria-label="Filter daily report"
           />
-          <Button type="button" size="sm" onClick={loadReports}>
-            Apply
+          <ReportRoleFilter value={role} onChange={onRoleChange} />
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              setDailyPage(1);
+            }}
+            inputSize="sm"
+            className="w-auto shrink-0"
+            aria-label="Report date"
+          />
+          <Button type="button" variant="secondary" size="sm" onClick={goToToday}>
+            Today
           </Button>
         </FilterBar>
         {dailyReport && (
           <>
-            <WeeklyAnalyticsCards totals={dailyReport.totals} title="Team totals (day)" />
+            <WeeklyAnalyticsCards
+              totals={dailyDisplayTotals}
+              title={
+                dailyQ.trim()
+                  ? 'Day totals (filtered employees)'
+                  : 'Day totals (all employees on this date)'
+              }
+            />
             <SummaryTable
               items={filteredDailyItems}
               showEmployee
-              loading={loading}
+              loading={dailyLoading}
               emptyMessage="No summaries match your filters."
+              page={dailyPage}
+              limit={DAILY_PAGE_SIZE}
+              onPageChange={setDailyPage}
             />
           </>
+        )}
+        {!dailyReport && dailyLoading && (
+          <LoadingMessage message="Loading daily report…" inline />
         )}
       </Section>
 
       <Section title="Weekly by employee">
+        <ErrorBanner message={weeklyError} onRetry={loadWeekly} />
         <FilterBar>
+          <Input
+            type="search"
+            placeholder="Filter by name or email"
+            value={weeklyQInput}
+            onChange={(e) => {
+              setWeeklyQInput(e.target.value);
+              setWeeklyPage(1);
+            }}
+            inputSize="sm"
+            className="min-w-[200px] flex-1"
+            aria-label="Filter weekly report"
+          />
+          <ReportRoleFilter value={role} onChange={onRoleChange} />
           <Input
             type="date"
             value={weekStart}
             onChange={(e) => {
-              setPage(1);
+              setWeeklyPage(1);
               setWeekStart(getWeekStartForDate(e.target.value, timezone));
             }}
             inputSize="sm"
-            className="w-auto"
+            className="w-auto shrink-0"
             aria-label="Week start"
           />
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              setPage(1);
-              loadReports();
-            }}
-          >
-            Load week
+          <Button type="button" variant="secondary" size="sm" onClick={goToThisWeek}>
+            This week
           </Button>
         </FilterBar>
 
         {weeklyReport && (
           <>
-            <WeeklyAnalyticsCards totals={weeklyReport.totals} title="Team totals (week)" />
+            <WeeklyAnalyticsCards
+              totals={weeklyReport.totals}
+              title="Week totals (all employees in range)"
+            />
             <PaginatedTable
               columns={[
                 { key: 'fullName', label: 'Employee' },
@@ -164,85 +320,92 @@ export function AdminReportsPage() {
                 {
                   key: 'reg',
                   label: 'Regular',
-                  align: 'right',
                   render: (row) => formatHours(row.totals?.totalRegularHours),
                 },
                 {
                   key: 'ot',
                   label: 'OT',
-                  align: 'right',
                   render: (row) => formatHours(row.totals?.totalOvertimeHours),
                 },
                 {
                   key: 'nd',
                   label: 'ND',
-                  align: 'right',
                   render: (row) => formatHours(row.totals?.totalNightDifferentialHours),
                 },
                 {
                   key: 'late',
                   label: 'Late',
-                  align: 'right',
                   render: (row) => formatMinutes(row.totals?.totalLateMinutes),
                 },
                 {
                   key: 'undertime',
                   label: 'Undertime',
-                  align: 'right',
                   render: (row) => formatMinutes(row.totals?.totalUndertimeMinutes),
                 },
               ]}
               rows={weeklyReport.items}
               rowKey={(row) => row.userId}
-              loading={loading}
+              loading={weeklyLoading}
               page={weeklyReport.page}
               limit={weeklyReport.limit}
               total={weeklyReport.total}
-              onPageChange={setPage}
+              onPageChange={setWeeklyPage}
               emptyTitle="No employees"
-              emptyMessage="No employees on this page."
+              emptyMessage="No employees match your filters."
             />
           </>
         )}
+        {!weeklyReport && weeklyLoading && (
+          <LoadingMessage message="Loading weekly report…" inline />
+        )}
       </Section>
 
-      <Section title="Exceptions">
+      <Section title="Tardiness">
+        <ErrorBanner message={exceptionsError} onRetry={loadExceptions} />
         <FilterBar>
+          <Input
+            type="search"
+            placeholder="Filter by name or email"
+            value={excQ}
+            onChange={(e) => {
+              setExcQ(e.target.value);
+              setExcPage(1);
+            }}
+            inputSize="sm"
+            className="min-w-[200px] flex-1"
+            aria-label="Filter tardiness"
+          />
+          <ReportRoleFilter value={role} onChange={onRoleChange} />
           <Input
             type="date"
             value={excFrom}
-            onChange={(e) => setExcFrom(e.target.value)}
+            onChange={(e) => {
+              setExcFrom(e.target.value);
+              setExcPage(1);
+            }}
             inputSize="sm"
-            className="w-auto"
-            aria-label="Exceptions from date"
+            className="w-auto shrink-0"
+            aria-label="Tardiness from date"
           />
           <Input
             type="date"
             value={excTo}
-            onChange={(e) => setExcTo(e.target.value)}
-            inputSize="sm"
-            className="w-auto"
-            aria-label="Exceptions to date"
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              setExcFrom(getCurrentWeekStart(timezone));
-              setExcTo(getWorkDateForTimezone(new Date(), timezone));
+            onChange={(e) => {
+              setExcTo(e.target.value);
+              setExcPage(1);
             }}
-          >
+            inputSize="sm"
+            className="w-auto shrink-0"
+            aria-label="Tardiness to date"
+          />
+          <Button type="button" variant="secondary" size="sm" onClick={goToExceptionsThisWeek}>
             This week
-          </Button>
-          <Button type="button" size="sm" onClick={loadReports}>
-            Load
           </Button>
         </FilterBar>
 
-        {loading ? (
-          <LoadingMessage message="Loading exceptions…" inline />
-        ) : exceptions.length ? (
+        {exceptionsLoading ? (
+          <LoadingMessage message="Loading tardiness…" inline />
+        ) : filteredExceptions.length ? (
           <PaginatedTable
             columns={[
               { key: 'fullName', label: 'Employee' },
@@ -250,25 +413,23 @@ export function AdminReportsPage() {
               {
                 key: 'late',
                 label: 'Late',
-                align: 'right',
                 render: (row) => formatMinutes(row.totalLateMinutes),
               },
               {
                 key: 'ut',
                 label: 'Undertime',
-                align: 'right',
                 render: (row) => formatMinutes(row.totalUndertimeMinutes),
               },
             ]}
-            rows={exceptions}
+            rows={paginatedExceptions}
             rowKey={(row) => `${row.userId}_${row.date}`}
-            page={1}
-            limit={exceptions.length}
-            total={exceptions.length}
-            onPageChange={() => {}}
+            page={excPage}
+            limit={EXCEPTIONS_PAGE_SIZE}
+            total={filteredExceptions.length}
+            onPageChange={setExcPage}
           />
         ) : (
-          <EmptyState title="No exceptions" description="No late or undertime alerts in range." />
+          <EmptyState title="No tardiness" description="No late or undertime alerts in range." />
         )}
       </Section>
     </PageContainer>

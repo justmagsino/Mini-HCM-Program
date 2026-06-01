@@ -7,7 +7,7 @@ export const listUsersQuerySchema = z.object({
     q: z.string().max(100).optional(),
     role: z.enum(['employee', 'admin']).optional(),
     page: z.coerce.number().int().positive().optional().default(1),
-    limit: z.coerce.number().int().positive().max(100).optional().default(20),
+    limit: z.coerce.number().int().positive().max(100).optional().default(10),
   }),
 });
 
@@ -56,9 +56,10 @@ export const searchAttendanceQuerySchema = z
       date: z.string().regex(DATE_REGEX).optional(),
       userId: firebaseUid.optional(),
       status: z.enum(['open', 'closed']).optional(),
+      role: z.enum(['employee', 'admin']).optional(),
       q: z.string().max(100).optional(),
       page: z.coerce.number().int().positive().optional().default(1),
-      limit: z.coerce.number().int().positive().max(100).optional().default(50),
+      limit: z.coerce.number().int().positive().max(100).optional().default(10),
     }),
   })
   .refine((data) => Boolean(data.query.date || data.query.userId), {

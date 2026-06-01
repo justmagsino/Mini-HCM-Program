@@ -12,7 +12,7 @@ export function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex min-h-screen items-center justify-center bg-cream">
         <LoadingSpinner label="Loading your session…" size="lg" />
       </div>
     );
@@ -25,7 +25,7 @@ export function ProtectedRoute() {
   if (!profile) {
     if (profileError) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="flex min-h-screen items-center justify-center bg-cream px-4">
           <PageContainer narrow className="max-w-md space-y-4">
             <Alert variant="error">{profileError}</Alert>
             <div className="flex flex-wrap gap-3">

@@ -47,6 +47,11 @@ export async function updateUserRole(uid, role) {
   return data;
 }
 
+export async function resetUserPassword(uid) {
+  const { data } = await api.post(`/admin/users/${uid}/reset-password`);
+  return data;
+}
+
 /**
  * @param {{ date?: string; userId?: string; status?: string; q?: string; page?: number; limit?: number }} params
  */
@@ -73,8 +78,11 @@ export async function patchAttendance(userId, date, body) {
   return data;
 }
 
-export async function getTeamDailyReport(date) {
-  const { data } = await api.get('/admin/reports/daily', { params: { date } });
+/**
+ * @param {{ date: string; role?: 'employee' | 'admin' }} params
+ */
+export async function getTeamDailyReport(params) {
+  const { data } = await api.get('/admin/reports/daily', { params });
   return data;
 }
 
@@ -86,6 +94,14 @@ export async function getTeamWeeklyReport(params) {
 export async function getExceptionsReport(params) {
   const { data } = await api.get('/admin/reports/exceptions', { params });
   return data.items;
+}
+
+/**
+ * @param {{ from: string; to: string; role?: 'employee' | 'admin' }} params
+ */
+export async function getAttendanceExportReport(params) {
+  const { data } = await api.get('/admin/reports/export', { params });
+  return data;
 }
 
 export async function getAdminDailySummary(params) {

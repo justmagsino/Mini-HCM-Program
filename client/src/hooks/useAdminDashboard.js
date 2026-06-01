@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as adminApi from '../api/admin.api.js';
 import { getApiErrorMessage } from '../api/axios.js';
 import { buildTeamOvertimeByDay } from '../utils/chartData.js';
-import { getCurrentWeekStart, getWorkDateForTimezone } from '../utils/dates.js';
+import { getWeekStartForDate, getWorkDateForTimezone } from '../utils/dates.js';
 import { useProfileTimezone } from './useProfileTimezone.js';
 
 export function useAdminDashboard() {
@@ -16,7 +16,8 @@ export function useAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const weekStart = useMemo(() => getCurrentWeekStart(timezone), [timezone]);
+  /** Monday of the week that contains the selected dashboard date */
+  const weekStart = useMemo(() => getWeekStartForDate(date, timezone), [date, timezone]);
 
   const load = useCallback(async () => {
     setLoading(true);

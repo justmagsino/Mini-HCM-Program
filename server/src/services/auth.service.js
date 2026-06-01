@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 import { AppError } from '../utils/errors.js';
+import { invalidateUserCache } from '../middleware/userCache.middleware.js';
 import * as usersRepository from '../repositories/users.repository.js';
 
 /**
@@ -37,5 +38,18 @@ export async function getProfileByUid(uid) {
   if (!user) {
     throw new AppError(404, 'PROFILE_NOT_FOUND', 'User profile not found');
   }
+  return user;
+}
+
+/**
+ * @param {string} uid
+ * @param {{ fullName: string }} body
+ */
+export async function updateProfile(uid, body) {
+  const user = await usersRepository.updateUser(uid, { fullName: body.fullName });
+  if (!user) {
+    throw new AppError(404, 'PROFILE_NOT_FOUND', 'User profile not found');
+  }
+  invalidateUserCache(uid);
   return user;
 }

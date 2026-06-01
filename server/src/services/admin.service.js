@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import { adminAuth } from '../config/firebaseAdmin.js';
 import { AppError } from '../utils/errors.js';
 import {
   getWorkDateForTimezone,
@@ -24,7 +25,7 @@ const RECENT_ATTENDANCE_DAYS = 14;
  */
 export async function listUsers(query) {
   const page = query.page ?? 1;
-  const limit = Math.min(query.limit ?? 20, 100);
+  const limit = Math.min(query.limit ?? 10, 100);
 
   let users = await usersRepository.listUsers(
     query.role ? { role: query.role, limit: MAX_EMPLOYEE_LIST } : { limit: MAX_EMPLOYEE_LIST },
@@ -118,11 +119,51 @@ export async function updateUserRole(actorUid, targetUid, role) {
 }
 
 /**
- * @param {{ date?: string; userId?: string; status?: string; q?: string; page?: number; limit?: number }} query
+ * Sets a user's Firebase Auth password to ADMIN_RESET_PASSWORD (admin demo tool).
+ * @param {string} actorUid
+ * @param {string} targetUid
+ */
+export async function resetUserPassword(actorUid, targetUid) {
+  const target = await usersRepository.getUserById(targetUid);
+  if (!target) {
+    throw new AppError(404, 'USER_NOT_FOUND', 'User not found');
+  }
+
+  try {
+    await adminAuth.updateUser(targetUid, { password: env.ADMIN_RESET_PASSWORD });
+  } catch (err) {
+    const code = /** @type {{ code?: string }} */ (err).code;
+    if (code === 'auth/user-not-found') {
+      throw new AppError(
+        404,
+        'AUTH_USER_NOT_FOUND',
+        'No Firebase Auth account for this user. They must register or be created via seed:demo first.',
+      );
+    }
+    throw err;
+  }
+
+  console.info(
+    JSON.stringify({
+      action: 'admin.user.resetPassword',
+      actorUid,
+      targetUid,
+      email: target.email,
+    }),
+  );
+
+  return {
+    ok: true,
+    message: 'Password reset successfully',
+  };
+}
+
+/**
+ * @param {{ date?: string; userId?: string; status?: string; role?: 'employee' | 'admin'; q?: string; page?: number; limit?: number }} query
  */
 export async function searchAttendance(query) {
   const page = query.page ?? 1;
-  const limit = Math.min(query.limit ?? 50, 100);
+  const limit = Math.min(query.limit ?? 10, 100);
 
   let rows = [];
 
@@ -161,6 +202,10 @@ export async function searchAttendance(query) {
 
   if (query.q) {
     items = filterByQuery(items, query.q);
+  }
+
+  if (query.role) {
+    items = items.filter((item) => userMap.get(item.attendance.userId)?.role === query.role);
   }
 
   items.sort((a, b) => a.fullName.localeCompare(b.fullName));
