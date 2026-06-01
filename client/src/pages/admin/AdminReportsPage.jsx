@@ -17,17 +17,16 @@ import { useProfileTimezone } from '../../hooks/useProfileTimezone.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { ErrorBanner } from '../../components/ui/ErrorBanner.jsx';
 import { LoadingMessage } from '../../components/ui/LoadingMessage.jsx';
-import { formatHours, formatMinutes } from '../../utils/format.js';
+import { formatDateLabel, formatHours, formatMinutes } from '../../utils/format.js';
 import { aggregateSummaryTotals } from '../../utils/summaryTotals.js';
 import { Section } from '../../components/ui/Section.jsx';
-import { FilterBar } from '../../components/ui/FilterBar.jsx';
+import { FilterBar, FilterBarAction } from '../../components/ui/FilterBar.jsx';
 import { Input } from '../../components/ui/Input.jsx';
 import { Select } from '../../components/ui/Select.jsx';
 import { Button } from '../../components/ui/Button.jsx';
-import { ReportExportBar } from '../../components/admin/ReportExportBar.jsx';
-
+import { TableWithToolbar } from '../../components/ui/TableWithToolbar.jsx';
 const DAILY_PAGE_SIZE = 10;
-const EXCEPTIONS_PAGE_SIZE = 10;
+const RANGE_PAGE_SIZE = 10;
 
 /** @param {{ value: string; onChange: (value: string) => void }} props */
 function ReportRoleFilter({ value, onChange }) {
@@ -67,24 +66,42 @@ export function AdminReportsPage() {
   const [dailyQ, setDailyQ] = useState('');
   const [weeklyQInput, setWeeklyQInput] = useState('');
   const weeklyQ = useDebouncedValue(weeklyQInput);
-  const [excQ, setExcQ] = useState('');
-  const [excFrom, setExcFrom] = useState(() => getCurrentWeekStart(timezone));
-  const [excTo, setExcTo] = useState(() => getWorkDateForTimezone(new Date(), timezone));
 
   const [dailyReport, setDailyReport] = useState(null);
   const [weeklyReport, setWeeklyReport] = useState(null);
-  const [exceptions, setExceptions] = useState([]);
   const [dailyPage, setDailyPage] = useState(1);
   const [weeklyPage, setWeeklyPage] = useState(1);
-  const [excPage, setExcPage] = useState(1);
 
   const [dailyLoading, setDailyLoading] = useState(true);
   const [weeklyLoading, setWeeklyLoading] = useState(true);
-  const [exceptionsLoading, setExceptionsLoading] = useState(true);
 
   const [dailyError, setDailyError] = useState('');
   const [weeklyError, setWeeklyError] = useState('');
-  const [exceptionsError, setExceptionsError] = useState('');
+
+  const today = useMemo(
+    () => getWorkDateForTimezone(new Date(), timezone),
+    [timezone],
+  );
+
+  const thisWeekStart = useMemo(
+    () => getCurrentWeekStart(timezone),
+    [timezone],
+  );
+
+  const [rangeQ, setRangeQ] = useState('');
+  const [rangeRole, setRangeRole] = useState('employee');
+  const [rangeFrom, setRangeFrom] = useState(thisWeekStart);
+  const [rangeTo, setRangeTo] = useState(today);
+  const [appliedRange, setAppliedRange] = useState(() => ({
+    q: '',
+    role: 'employee',
+    from: thisWeekStart,
+    to: today,
+  }));
+  const [rangeReport, setRangeReport] = useState(null);
+  const [rangePage, setRangePage] = useState(1);
+  const [rangeLoading, setRangeLoading] = useState(true);
+  const [rangeError, setRangeError] = useState('');
 
   const loadDaily = useCallback(async () => {
     setDailyLoading(true);
@@ -121,29 +138,6 @@ export function AdminReportsPage() {
     }
   }, [weekStart, weeklyPage, weeklyQ, role]);
 
-  const loadExceptions = useCallback(async () => {
-    const rangeCheck = historyDateRangeSchema.safeParse({ from: excFrom, to: excTo });
-    if (!rangeCheck.success) {
-      setExceptionsError(rangeCheck.error.errors[0]?.message ?? 'Invalid date range');
-      return;
-    }
-
-    setExceptionsLoading(true);
-    setExceptionsError('');
-    try {
-      const exc = await adminApi.getExceptionsReport({
-        from: excFrom,
-        to: excTo,
-        role: role || undefined,
-      });
-      setExceptions(exc);
-    } catch (err) {
-      setExceptionsError(getApiErrorMessage(err));
-    } finally {
-      setExceptionsLoading(false);
-    }
-  }, [excFrom, excTo, role]);
-
   useEffect(() => {
     loadDaily();
   }, [loadDaily]);
@@ -152,25 +146,35 @@ export function AdminReportsPage() {
     loadWeekly();
   }, [loadWeekly]);
 
+  const loadRange = useCallback(async () => {
+    setRangeLoading(true);
+    setRangeError('');
+    try {
+      const data = await adminApi.getTeamRangeReport({
+        from: appliedRange.from,
+        to: appliedRange.to,
+        role: appliedRange.role || undefined,
+        q: appliedRange.q.trim() || undefined,
+        page: rangePage,
+        limit: RANGE_PAGE_SIZE,
+      });
+      setRangeReport(data);
+    } catch (err) {
+      setRangeError(getApiErrorMessage(err));
+      setRangeReport(null);
+    } finally {
+      setRangeLoading(false);
+    }
+  }, [appliedRange, rangePage]);
+
   useEffect(() => {
-    loadExceptions();
-  }, [loadExceptions]);
-
-  const today = useMemo(
-    () => getWorkDateForTimezone(new Date(), timezone),
-    [timezone],
-  );
-
-  const thisWeekStart = useMemo(
-    () => getCurrentWeekStart(timezone),
-    [timezone],
-  );
+    loadRange();
+  }, [loadRange]);
 
   const onRoleChange = (nextRole) => {
     setRole(nextRole);
     setDailyPage(1);
     setWeeklyPage(1);
-    setExcPage(1);
   };
 
   const goToToday = () => {
@@ -183,10 +187,21 @@ export function AdminReportsPage() {
     setWeeklyPage(1);
   };
 
-  const goToExceptionsThisWeek = () => {
-    setExcFrom(thisWeekStart);
-    setExcTo(today);
-    setExcPage(1);
+  const applyRangeFilters = (event) => {
+    event.preventDefault();
+    const rangeCheck = historyDateRangeSchema.safeParse({ from: rangeFrom, to: rangeTo });
+    if (!rangeCheck.success) {
+      setRangeError(rangeCheck.error.errors[0]?.message ?? 'Invalid date range');
+      return;
+    }
+    setRangeError('');
+    setAppliedRange({
+      q: rangeQ,
+      role: rangeRole,
+      from: rangeFrom,
+      to: rangeTo,
+    });
+    setRangePage(1);
   };
 
   const filteredDailyItems = useMemo(
@@ -199,16 +214,6 @@ export function AdminReportsPage() {
     [filteredDailyItems],
   );
 
-  const filteredExceptions = useMemo(
-    () => filterByNameOrEmail(exceptions, excQ),
-    [exceptions, excQ],
-  );
-
-  const paginatedExceptions = useMemo(() => {
-    const start = (excPage - 1) * EXCEPTIONS_PAGE_SIZE;
-    return filteredExceptions.slice(start, start + EXCEPTIONS_PAGE_SIZE);
-  }, [filteredExceptions, excPage]);
-
   return (
     <PageContainer>
       <PageHeader
@@ -216,221 +221,270 @@ export function AdminReportsPage() {
         description="Summaries with regular, OT, night differential, late, and undertime."
       />
 
-      <ReportExportBar defaultRole={role} />
-
       <Section title="Daily summary">
         <ErrorBanner message={dailyError} onRetry={loadDaily} />
-        <FilterBar>
-          <Input
-            type="search"
-            placeholder="Filter by name or email"
-            value={dailyQ}
-            onChange={(e) => {
-              setDailyQ(e.target.value);
-              setDailyPage(1);
-            }}
-            inputSize="sm"
-            className="min-w-[200px] flex-1"
-            aria-label="Filter daily report"
-          />
-          <ReportRoleFilter value={role} onChange={onRoleChange} />
-          <Input
-            type="date"
-            value={date}
-            onChange={(e) => {
-              setDate(e.target.value);
-              setDailyPage(1);
-            }}
-            inputSize="sm"
-            className="w-auto shrink-0"
-            aria-label="Report date"
-          />
-          <Button type="button" variant="secondary" size="sm" onClick={goToToday}>
-            Today
-          </Button>
-        </FilterBar>
-        {dailyReport && (
-          <>
-            <WeeklyAnalyticsCards
-              totals={dailyDisplayTotals}
-              title={
-                dailyQ.trim()
-                  ? 'Day totals (filtered employees)'
-                  : 'Day totals (all employees on this date)'
-              }
-            />
-            <SummaryTable
-              items={filteredDailyItems}
-              showEmployee
-              loading={dailyLoading}
-              emptyMessage="No summaries match your filters."
-              page={dailyPage}
-              limit={DAILY_PAGE_SIZE}
-              onPageChange={setDailyPage}
-            />
-          </>
-        )}
-        {!dailyReport && dailyLoading && (
-          <LoadingMessage message="Loading daily report…" inline />
-        )}
+        <TableWithToolbar
+          toolbar={
+            <FilterBar>
+              <Input
+                type="search"
+                placeholder="Filter by name or email"
+                value={dailyQ}
+                onChange={(e) => {
+                  setDailyQ(e.target.value);
+                  setDailyPage(1);
+                }}
+                inputSize="sm"
+                className="min-w-[200px] flex-1"
+                aria-label="Filter daily report"
+              />
+              <ReportRoleFilter value={role} onChange={onRoleChange} />
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  setDailyPage(1);
+                }}
+                inputSize="sm"
+                className="w-auto shrink-0"
+                aria-label="Report date"
+              />
+              <Button type="button" variant="secondary" size="sm" onClick={goToToday}>
+                Today
+              </Button>
+            </FilterBar>
+          }
+        >
+          {dailyReport ? (
+            <div className="table-panel-body">
+            <WeeklyAnalyticsCards totals={dailyDisplayTotals} />
+              <SummaryTable
+                items={filteredDailyItems}
+                showEmployee
+                loading={dailyLoading}
+                emptyMessage="No summaries match your filters."
+                page={dailyPage}
+                limit={DAILY_PAGE_SIZE}
+                onPageChange={setDailyPage}
+              />
+            </div>
+          ) : dailyLoading ? (
+            <div className="table-panel-body">
+              <LoadingMessage message="Loading daily report…" inline />
+            </div>
+          ) : null}
+        </TableWithToolbar>
       </Section>
 
-      <Section title="Weekly by employee">
+      <Section title="Weekly Summary">
         <ErrorBanner message={weeklyError} onRetry={loadWeekly} />
-        <FilterBar>
-          <Input
-            type="search"
-            placeholder="Filter by name or email"
-            value={weeklyQInput}
-            onChange={(e) => {
-              setWeeklyQInput(e.target.value);
-              setWeeklyPage(1);
-            }}
-            inputSize="sm"
-            className="min-w-[200px] flex-1"
-            aria-label="Filter weekly report"
-          />
-          <ReportRoleFilter value={role} onChange={onRoleChange} />
-          <Input
-            type="date"
-            value={weekStart}
-            onChange={(e) => {
-              setWeeklyPage(1);
-              setWeekStart(getWeekStartForDate(e.target.value, timezone));
-            }}
-            inputSize="sm"
-            className="w-auto shrink-0"
-            aria-label="Week start"
-          />
-          <Button type="button" variant="secondary" size="sm" onClick={goToThisWeek}>
-            This week
-          </Button>
-        </FilterBar>
-
-        {weeklyReport && (
-          <>
-            <WeeklyAnalyticsCards
-              totals={weeklyReport.totals}
-              title="Week totals (all employees in range)"
-            />
-            <PaginatedTable
-              columns={[
-                { key: 'fullName', label: 'Employee' },
-                { key: 'email', label: 'Email' },
-                {
-                  key: 'reg',
-                  label: 'Regular',
-                  render: (row) => formatHours(row.totals?.totalRegularHours),
-                },
-                {
-                  key: 'ot',
-                  label: 'OT',
-                  render: (row) => formatHours(row.totals?.totalOvertimeHours),
-                },
-                {
-                  key: 'nd',
-                  label: 'ND',
-                  render: (row) => formatHours(row.totals?.totalNightDifferentialHours),
-                },
-                {
-                  key: 'late',
-                  label: 'Late',
-                  render: (row) => formatMinutes(row.totals?.totalLateMinutes),
-                },
-                {
-                  key: 'undertime',
-                  label: 'Undertime',
-                  render: (row) => formatMinutes(row.totals?.totalUndertimeMinutes),
-                },
-              ]}
-              rows={weeklyReport.items}
-              rowKey={(row) => row.userId}
-              loading={weeklyLoading}
-              page={weeklyReport.page}
-              limit={weeklyReport.limit}
-              total={weeklyReport.total}
-              onPageChange={setWeeklyPage}
-              emptyTitle="No employees"
-              emptyMessage="No employees match your filters."
-            />
-          </>
-        )}
-        {!weeklyReport && weeklyLoading && (
-          <LoadingMessage message="Loading weekly report…" inline />
-        )}
+        <TableWithToolbar
+          toolbar={
+            <FilterBar>
+              <Input
+                type="search"
+                placeholder="Filter by name or email"
+                value={weeklyQInput}
+                onChange={(e) => {
+                  setWeeklyQInput(e.target.value);
+                  setWeeklyPage(1);
+                }}
+                inputSize="sm"
+                className="min-w-[200px] flex-1"
+                aria-label="Filter weekly report"
+              />
+              <ReportRoleFilter value={role} onChange={onRoleChange} />
+              <Input
+                type="date"
+                value={weekStart}
+                onChange={(e) => {
+                  setWeeklyPage(1);
+                  setWeekStart(getWeekStartForDate(e.target.value, timezone));
+                }}
+                inputSize="sm"
+                className="w-auto shrink-0"
+                aria-label="Week start"
+              />
+              <Button type="button" variant="secondary" size="sm" onClick={goToThisWeek}>
+                This week
+              </Button>
+            </FilterBar>
+          }
+        >
+          {weeklyReport ? (
+            <div className="table-panel-body">
+            <WeeklyAnalyticsCards totals={weeklyReport.totals} />
+              <PaginatedTable
+                columns={[
+                  { key: 'fullName', label: 'Employee' },
+                  { key: 'email', label: 'Email' },
+                  {
+                    key: 'reg',
+                    label: 'Regular',
+                    align: 'center',
+                    render: (row) => formatHours(row.totals?.totalRegularHours),
+                  },
+                  {
+                    key: 'ot',
+                    label: 'OT',
+                    align: 'center',
+                    render: (row) => formatHours(row.totals?.totalOvertimeHours),
+                  },
+                  {
+                    key: 'nd',
+                    label: 'ND',
+                    align: 'center',
+                    render: (row) => formatHours(row.totals?.totalNightDifferentialHours),
+                  },
+                  {
+                    key: 'late',
+                    label: 'Late',
+                    align: 'center',
+                    render: (row) => formatMinutes(row.totals?.totalLateMinutes),
+                  },
+                  {
+                    key: 'undertime',
+                    label: 'Undertime',
+                    align: 'center',
+                    render: (row) => formatMinutes(row.totals?.totalUndertimeMinutes),
+                  },
+                ]}
+                rows={weeklyReport.items}
+                rowKey={(row) => row.userId}
+                loading={weeklyLoading}
+                page={weeklyReport.page}
+                limit={weeklyReport.limit}
+                total={weeklyReport.total}
+                onPageChange={setWeeklyPage}
+                emptyTitle="No employees"
+                emptyMessage="No employees match your filters."
+              />
+            </div>
+          ) : weeklyLoading ? (
+            <div className="table-panel-body">
+              <LoadingMessage message="Loading weekly report…" inline />
+            </div>
+          ) : null}
+        </TableWithToolbar>
       </Section>
 
-      <Section title="Tardiness">
-        <ErrorBanner message={exceptionsError} onRetry={loadExceptions} />
-        <FilterBar>
-          <Input
-            type="search"
-            placeholder="Filter by name or email"
-            value={excQ}
-            onChange={(e) => {
-              setExcQ(e.target.value);
-              setExcPage(1);
-            }}
-            inputSize="sm"
-            className="min-w-[200px] flex-1"
-            aria-label="Filter tardiness"
-          />
-          <ReportRoleFilter value={role} onChange={onRoleChange} />
-          <Input
-            type="date"
-            value={excFrom}
-            onChange={(e) => {
-              setExcFrom(e.target.value);
-              setExcPage(1);
-            }}
-            inputSize="sm"
-            className="w-auto shrink-0"
-            aria-label="Tardiness from date"
-          />
-          <Input
-            type="date"
-            value={excTo}
-            onChange={(e) => {
-              setExcTo(e.target.value);
-              setExcPage(1);
-            }}
-            inputSize="sm"
-            className="w-auto shrink-0"
-            aria-label="Tardiness to date"
-          />
-          <Button type="button" variant="secondary" size="sm" onClick={goToExceptionsThisWeek}>
-            This week
-          </Button>
-        </FilterBar>
-
-        {exceptionsLoading ? (
-          <LoadingMessage message="Loading tardiness…" inline />
-        ) : filteredExceptions.length ? (
-          <PaginatedTable
-            columns={[
-              { key: 'fullName', label: 'Employee' },
-              { key: 'date', label: 'Date' },
-              {
-                key: 'late',
-                label: 'Late',
-                render: (row) => formatMinutes(row.totalLateMinutes),
-              },
-              {
-                key: 'ut',
-                label: 'Undertime',
-                render: (row) => formatMinutes(row.totalUndertimeMinutes),
-              },
-            ]}
-            rows={paginatedExceptions}
-            rowKey={(row) => `${row.userId}_${row.date}`}
-            page={excPage}
-            limit={EXCEPTIONS_PAGE_SIZE}
-            total={filteredExceptions.length}
-            onPageChange={setExcPage}
-          />
-        ) : (
-          <EmptyState title="No tardiness" description="No late or undertime alerts in range." />
-        )}
+      <Section
+        title="Range summary"
+        description={
+          rangeReport
+            ? `${formatDateLabel(rangeReport.from)} – ${formatDateLabel(rangeReport.to)} · totals for closed days in range`
+            : 'Pick a date range and apply to see per-employee totals.'
+        }
+      >
+        <ErrorBanner message={rangeError} onRetry={loadRange} />
+        <TableWithToolbar
+          toolbar={
+            <FilterBar>
+              <form onSubmit={applyRangeFilters}>
+                <Input
+                  type="search"
+                  placeholder="Filter by name or email"
+                  value={rangeQ}
+                  onChange={(e) => setRangeQ(e.target.value)}
+                  inputSize="sm"
+                  className="min-w-[200px] flex-1"
+                  aria-label="Filter range report"
+                />
+                <ReportRoleFilter value={rangeRole} onChange={setRangeRole} />
+                <Input
+                  type="date"
+                  value={rangeFrom}
+                  onChange={(e) => setRangeFrom(e.target.value)}
+                  inputSize="sm"
+                  className="w-auto shrink-0"
+                  aria-label="Range start date"
+                />
+                <Input
+                  type="date"
+                  value={rangeTo}
+                  onChange={(e) => setRangeTo(e.target.value)}
+                  inputSize="sm"
+                  className="w-auto shrink-0"
+                  aria-label="Range end date"
+                />
+                <FilterBarAction>
+                  <Button type="submit" variant="primary" size="sm" loading={rangeLoading}>
+                    Apply
+                  </Button>
+                </FilterBarAction>
+              </form>
+            </FilterBar>
+          }
+        >
+          {rangeLoading && !rangeReport ? (
+            <div className="table-panel-body">
+              <LoadingMessage message="Loading range summary…" inline />
+            </div>
+          ) : rangeReport ? (
+            <div className="table-panel-body">
+              <WeeklyAnalyticsCards totals={rangeReport.totals} />
+              {rangeReport.items.length ? (
+                <PaginatedTable
+                  columns={[
+                    { key: 'fullName', label: 'Employee' },
+                    { key: 'email', label: 'Email' },
+                    {
+                      key: 'days',
+                      label: 'Days',
+                      align: 'center',
+                      render: (row) => String(row.daysWithSummary ?? 0),
+                    },
+                    {
+                      key: 'reg',
+                      label: 'Regular',
+                      align: 'center',
+                      render: (row) => formatHours(row.totals?.totalRegularHours),
+                    },
+                    {
+                      key: 'ot',
+                      label: 'OT',
+                      align: 'center',
+                      render: (row) => formatHours(row.totals?.totalOvertimeHours),
+                    },
+                    {
+                      key: 'nd',
+                      label: 'ND',
+                      align: 'center',
+                      render: (row) => formatHours(row.totals?.totalNightDifferentialHours),
+                    },
+                    {
+                      key: 'late',
+                      label: 'Late',
+                      align: 'center',
+                      render: (row) => formatMinutes(row.totals?.totalLateMinutes),
+                    },
+                    {
+                      key: 'undertime',
+                      label: 'Undertime',
+                      align: 'center',
+                      render: (row) => formatMinutes(row.totals?.totalUndertimeMinutes),
+                    },
+                  ]}
+                  rows={rangeReport.items}
+                  rowKey={(row) => row.userId}
+                  loading={rangeLoading}
+                  page={rangeReport.page}
+                  limit={rangeReport.limit}
+                  total={rangeReport.total}
+                  onPageChange={setRangePage}
+                  emptyTitle="No employees"
+                  emptyMessage="No employees match your filters."
+                />
+              ) : (
+                <EmptyState
+                  title="No data in range"
+                  description="No employees match your filters, or no closed attendance in this range."
+                />
+              )}
+            </div>
+          ) : null}
+        </TableWithToolbar>
       </Section>
     </PageContainer>
   );

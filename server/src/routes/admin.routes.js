@@ -8,12 +8,12 @@ import { validate } from '../middleware/validate.middleware.js';
 import {
   adminDailySummaryQuerySchema,
   adminReportDateQuerySchema,
+  adminRangeReportQuerySchema,
   adminWeeklyReportQuerySchema,
-  exceptionsQuerySchema,
-  exportReportQuerySchema,
 } from '../schemas/summary.schema.js';
 import {
   createAttendanceBodySchema,
+  deleteAttendanceParamsSchema,
   dashboardKpisQuerySchema,
   listUsersQuerySchema,
   patchAttendanceBodySchema,
@@ -88,6 +88,12 @@ router.patch(
   adminWriteLimiter,
   asyncHandler(adminController.patchAttendance),
 );
+router.delete(
+  '/attendance/:userId/:date',
+  validate(deleteAttendanceParamsSchema),
+  adminWriteLimiter,
+  asyncHandler(adminController.deleteAttendance),
+);
 
 router.get(
   '/summaries/daily',
@@ -105,14 +111,9 @@ router.get(
   asyncHandler(reportController.getTeamWeeklyReport),
 );
 router.get(
-  '/reports/exceptions',
-  validate(exceptionsQuerySchema),
-  asyncHandler(reportController.getExceptionsReport),
-);
-router.get(
-  '/reports/export',
-  validate(exportReportQuerySchema),
-  asyncHandler(reportController.getAttendanceExportReport),
+  '/reports/range',
+  validate(adminRangeReportQuerySchema),
+  asyncHandler(reportController.getTeamRangeReport),
 );
 
 export default router;

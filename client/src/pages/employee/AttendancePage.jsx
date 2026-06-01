@@ -13,6 +13,7 @@ import { Input } from '../../components/ui/Input.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Alert } from '../../components/ui/Alert.jsx';
 import { FilterBar, FilterBarAction } from '../../components/ui/FilterBar.jsx';
+import { getCurrentWeekStart, getWorkDateForTimezone } from '../../utils/dates.js';
 
 export function AttendancePage() {
   const {
@@ -29,6 +30,8 @@ export function AttendancePage() {
     punchIn,
     punchOut,
     applyHistoryFilter,
+    changeHistoryPage,
+    historyPageSize,
   } = useAttendance();
 
   const [filterError, setFilterError] = useState('');
@@ -36,6 +39,7 @@ export function AttendancePage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(historyFilterSchema),
@@ -49,6 +53,19 @@ export function AttendancePage() {
       await applyHistoryFilter(values);
     } catch {
       setFilterError('Could not load history for the selected range.');
+    }
+  };
+
+  const goToThisWeek = async () => {
+    setFilterError('');
+    const from = getCurrentWeekStart(timezone);
+    const to = getWorkDateForTimezone(new Date(), timezone);
+    setValue('from', from);
+    setValue('to', to);
+    try {
+      await applyHistoryFilter({ from, to });
+    } catch {
+      setFilterError('Could not load history for this week.');
     }
   };
 
@@ -111,6 +128,15 @@ export function AttendancePage() {
             </FormField>
             <FilterBarAction>
               <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={historyLoading}
+                onClick={goToThisWeek}
+              >
+                This week
+              </Button>
+              <Button
                 type="submit"
                 variant="secondary"
                 size="sm"
@@ -129,13 +155,11 @@ export function AttendancePage() {
           items={history.items}
           timezone={timezone}
           loading={historyLoading && !loading}
+          page={history.page}
+          limit={historyPageSize}
+          total={history.total}
+          onPageChange={changeHistoryPage}
         />
-
-        {history.total > 0 && (
-          <p className="text-xs text-slate-500" aria-live="polite">
-            Showing {history.items.length} of {history.total} record(s)
-          </p>
-        )}
       </Section>
     </PageContainer>
   );

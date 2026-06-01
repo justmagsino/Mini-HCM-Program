@@ -23,14 +23,13 @@ export async function getTeamWeeklyReport(req, res) {
   return res.status(200).json(result);
 }
 
-export async function getExceptionsReport(req, res) {
-  const { from, to, role } = req.validated.query;
-  const result = await reportService.getExceptionsReport(from, to, role);
-  return res.status(200).json(result);
-}
-
-export async function getAttendanceExportReport(req, res) {
-  const { from, to, role } = req.validated.query;
-  const result = await reportService.getAttendanceExportReport(from, to, role);
+export async function getTeamRangeReport(req, res) {
+  const { from, to, page, limit, q, role } = req.validated.query;
+  const result = await reportService.getTeamRangeReport(from, to, {
+    page,
+    limit,
+    q,
+    role,
+  });
   return res.status(200).json(result);
 }

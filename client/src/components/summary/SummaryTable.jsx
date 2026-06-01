@@ -1,6 +1,6 @@
 import { formatDateLabel, formatHours, formatMinutes } from '../../utils/format.js';
 import { DataTable } from '../ui/DataTable.jsx';
-import { Button } from '../ui/Button.jsx';
+import { TablePaginationFooter } from '../ui/TablePaginationFooter.jsx';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -36,8 +36,6 @@ export function SummaryTable({
   const total = items.length;
   const rows = onPageChange ? items.slice((page - 1) * limit, page * limit) : items;
   const totalPages = Math.max(1, Math.ceil(total / limit));
-  const canPrev = page > 1;
-  const canNext = page < totalPages;
   const columns = [
     {
       key: 'date',
@@ -60,71 +58,58 @@ export function SummaryTable({
     {
       key: 'regular',
       label: 'Regular',
+      align: 'center',
       render: (row) => formatHours(row.totalRegularHours),
     },
     {
       key: 'ot',
       label: 'OT',
+      align: 'center',
       render: (row) => formatHours(row.totalOvertimeHours),
     },
     {
       key: 'nd',
       label: 'ND',
+      align: 'center',
       render: (row) => formatHours(row.totalNightDifferentialHours),
     },
     {
       key: 'late',
       label: 'Late',
+      align: 'center',
       render: (row) => formatMinutes(row.totalLateMinutes),
     },
     {
       key: 'undertime',
       label: 'Undertime',
+      align: 'center',
       render: (row) => formatMinutes(row.totalUndertimeMinutes),
     },
   );
 
   return (
-    <div className="space-y-3">
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={(row) => `${row.userId ?? ''}_${row.date}`}
-        loading={loading}
-        emptyTitle="No summaries"
-        emptyMessage={emptyMessage}
-        caption="Summary records"
-      />
-      {onPageChange && total > 0 && (
-        <nav
-          className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between"
-          aria-label="Summary table pagination"
-        >
-          <span>
-            Showing {rows.length} of {total} · Page {page} of {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!canPrev || loading}
-              onClick={() => onPageChange(page - 1)}
-              aria-label="Previous page"
-            >
-              Previous
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!canNext || loading}
-              onClick={() => onPageChange(page + 1)}
-              aria-label="Next page"
-            >
-              Next
-            </Button>
-          </div>
-        </nav>
-      )}
-    </div>
+    <DataTable
+      columns={columns}
+      rows={rows}
+      rowKey={(row) => `${row.userId ?? ''}_${row.date}`}
+      loading={loading}
+      emptyTitle="No summaries"
+      emptyMessage={emptyMessage}
+      caption="Summary records"
+      minRows={onPageChange && total > 0 ? limit : 0}
+      footer={
+        onPageChange && total > 0 ? (
+          <TablePaginationFooter
+            pageRowCount={rows.length}
+            total={total}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            loading={loading}
+            ariaLabel="Summary table pagination"
+          />
+        ) : null
+      }
+    />
   );
 }

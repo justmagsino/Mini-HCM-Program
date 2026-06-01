@@ -1,4 +1,3 @@
-import { env } from '../config/env.js';
 import { AppError } from '../utils/errors.js';
 import {
   assertValidHistoryRange,
@@ -137,86 +136,56 @@ export async function getTeamWeeklyReport(weekStart, timezone, pagination = {}) 
 }
 
 /**
- * Late / undertime exceptions from dailySummary in range.
- * @param {string} from
- * @param {string} to
- * @param {'employee' | 'admin'} [role]
+ * Team range report: aggregate dailySummary per employee between from and to (inclusive).
+ * @param {string} from YYYY-MM-DD
+ * @param {string} to YYYY-MM-DD
+ * @param {{ page?: number; limit?: number; q?: string; role?: 'employee' | 'admin' }} pagination
  */
-export async function getExceptionsReport(from, to, role) {
+export async function getTeamRangeReport(from, to, pagination = {}) {
   const range = assertValidHistoryRange(from, to);
   if (!range.ok) {
     const code = range.message.includes('exceed') ? 'RANGE_TOO_LARGE' : 'VALIDATION_ERROR';
     throw new AppError(400, code, range.message);
   }
 
-  const summaries = await dailySummaryRepository.queryByDateRange(range.from, range.to);
-  const flagged = summaries.filter(
-    (s) =>
-      s.totalLateMinutes >= env.LATE_ALERT_MINUTES ||
-      s.totalUndertimeMinutes >= env.UNDERTIME_ALERT_MINUTES,
-  );
+  const page = pagination.page ?? 1;
+  const limit = Math.min(pagination.limit ?? 10, 100);
 
-  const users = await usersRepository.getUsersByIds(flagged.map((s) => s.userId));
-  const userMap = new Map(users.map((u) => [u.uid, u]));
-
-  let items = flagged
-    .map((row) => ({
-      userId: row.userId,
-      fullName: userMap.get(row.userId)?.fullName ?? 'Unknown',
-      date: row.date,
-      totalLateMinutes: row.totalLateMinutes,
-      totalUndertimeMinutes: row.totalUndertimeMinutes,
-    }))
-    .sort((a, b) => a.date.localeCompare(b.date) || a.fullName.localeCompare(b.fullName));
-
-  if (role) {
-    items = items.filter((row) => userMap.get(row.userId)?.role === role);
+  const listOptions = { limit: MAX_EMPLOYEE_LIST };
+  if (pagination.role) {
+    listOptions.role = pagination.role;
   }
 
-  return { items, from: range.from, to: range.to };
-}
+  let users = await usersRepository.listUsers(listOptions);
+  users = filterByQuery(users, pagination.q);
+  const total = users.length;
+  const start = (page - 1) * limit;
+  const pageUsers = users.slice(start, start + limit);
+  const allowedUserIds = new Set(users.map((u) => u.uid));
 
-/**
- * Daily summary rows for Excel export (inclusive date range).
- * @param {string} from
- * @param {string} to
- * @param {'employee' | 'admin'} [role]
- */
-export async function getAttendanceExportReport(from, to, role) {
-  const range = assertValidHistoryRange(from, to);
-  if (!range.ok) {
-    const code = range.message.includes('exceed') ? 'RANGE_TOO_LARGE' : 'VALIDATION_ERROR';
-    throw new AppError(400, code, range.message);
-  }
+  const rangeSummaries = await dailySummaryRepository.queryByDateRange(range.from, range.to);
+  const byUser = groupSummariesByUserId(rangeSummaries);
 
-  const summaries = await dailySummaryRepository.queryByDateRange(range.from, range.to);
-  const userIds = [...new Set(summaries.map((s) => s.userId))];
-  const users = await usersRepository.getUsersByIds(userIds);
-  const userMap = new Map(users.map((u) => [u.uid, u]));
+  const totalsSummaries = rangeSummaries.filter((s) => allowedUserIds.has(s.userId));
 
-  let items = summaries.map((summary) => {
-    const user = userMap.get(summary.userId);
+  const items = pageUsers.map((user) => {
+    const userSummaries = byUser.get(user.uid) ?? [];
     return {
-      date: summary.date,
-      userId: summary.userId,
-      fullName: user?.fullName ?? 'Unknown',
-      email: user?.email ?? '',
-      role: user?.role ?? '',
-      totalRegularHours: summary.totalRegularHours,
-      totalOvertimeHours: summary.totalOvertimeHours,
-      totalNightDifferentialHours: summary.totalNightDifferentialHours,
-      totalLateMinutes: summary.totalLateMinutes,
-      totalUndertimeMinutes: summary.totalUndertimeMinutes,
+      userId: user.uid,
+      fullName: user.fullName,
+      email: user.email,
+      daysWithSummary: userSummaries.length,
+      totals: aggregateTotals(userSummaries),
     };
   });
 
-  if (role) {
-    items = items.filter((row) => row.role === role);
-  }
-
-  items.sort(
-    (a, b) => a.date.localeCompare(b.date) || a.fullName.localeCompare(b.fullName),
-  );
-
-  return { from: range.from, to: range.to, items };
+  return {
+    from: range.from,
+    to: range.to,
+    items,
+    page,
+    limit,
+    total,
+    totals: aggregateTotals(totalsSummaries),
+  };
 }

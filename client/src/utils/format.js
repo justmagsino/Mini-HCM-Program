@@ -43,6 +43,53 @@ export function formatDateLabel(dateStr) {
 }
 
 /**
+ * @param {string} dateStr YYYY-MM-DD
+ */
+export function formatDateShort(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+  }).format(date);
+}
+
+/**
+ * @param {number | null | undefined} hours Decimal hours
+ */
+export function formatHoursMinutes(hours) {
+  if (hours == null) {
+    return '—';
+  }
+
+  const totalMinutes = Math.round(Number(hours) * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}h ${String(m).padStart(2, '0')}m`;
+}
+
+/**
+ * @param {string | null | undefined} timeIn ISO
+ * @param {string | null | undefined} timeOut ISO
+ */
+export function formatWorkedDuration(timeIn, timeOut) {
+  if (!timeIn || !timeOut) {
+    return '—';
+  }
+
+  const start = new Date(timeIn).getTime();
+  const end = new Date(timeOut).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+    return '—';
+  }
+
+  const totalMinutes = Math.floor((end - start) / 60_000);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}h ${String(m).padStart(2, '0')}m`;
+}
+
+/**
  * @param {number | null | undefined} hours
  */
 export function formatHours(hours) {

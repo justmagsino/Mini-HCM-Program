@@ -1,5 +1,5 @@
 import { DataTable } from './DataTable.jsx';
-import { Button } from './Button.jsx';
+import { TablePaginationFooter } from './TablePaginationFooter.jsx';
 
 /**
  * @param {{
@@ -28,49 +28,28 @@ export function PaginatedTable({
   onPageChange,
 }) {
   const totalPages = Math.max(1, Math.ceil(total / limit));
-  const canPrev = page > 1;
-  const canNext = page < totalPages;
 
   return (
-    <div className="space-y-3">
-      <DataTable
-        columns={columns}
-        rows={rows}
-        rowKey={rowKey}
-        loading={loading}
-        emptyMessage={emptyMessage}
-        emptyTitle={emptyTitle}
-      />
-      {total > 0 && (
-        <nav
-          className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between"
-          aria-label="Table pagination"
-        >
-          <span>
-            Showing {rows.length} of {total} · Page {page} of {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!canPrev || loading}
-              onClick={() => onPageChange(page - 1)}
-              aria-label="Previous page"
-            >
-              Previous
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!canNext || loading}
-              onClick={() => onPageChange(page + 1)}
-              aria-label="Next page"
-            >
-              Next
-            </Button>
-          </div>
-        </nav>
-      )}
-    </div>
+    <DataTable
+      columns={columns}
+      rows={rows}
+      rowKey={rowKey}
+      loading={loading}
+      emptyMessage={emptyMessage}
+      emptyTitle={emptyTitle}
+      minRows={total > 0 ? limit : 0}
+      footer={
+        total > 0 ? (
+          <TablePaginationFooter
+            pageRowCount={rows.length}
+            total={total}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            loading={loading}
+          />
+        ) : null
+      }
+    />
   );
 }

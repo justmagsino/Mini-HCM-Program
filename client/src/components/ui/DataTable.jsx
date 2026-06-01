@@ -27,6 +27,8 @@ function tableAlignClass(align) {
  *   emptyMessage?: string;
  *   emptyTitle?: string;
  *   caption?: string;
+ *   minRows?: number;
+ *   footer?: import('react').ReactNode;
  * }} props
  */
 export function DataTable({
@@ -37,6 +39,8 @@ export function DataTable({
   emptyMessage = 'No records to display.',
   emptyTitle = 'Nothing here yet',
   caption,
+  minRows = 0,
+  footer = null,
 }) {
   if (loading) {
     return <TableSkeleton />;
@@ -46,7 +50,9 @@ export function DataTable({
     return <EmptyState title={emptyTitle} description={emptyMessage} />;
   }
 
-  return (
+  const padCount = minRows > 0 ? Math.max(0, minRows - rows.length) : 0;
+
+  const table = (
     <div className="table-shell">
       <table className="table-base">
         {caption && <caption className="sr-only">{caption}</caption>}
@@ -69,8 +75,28 @@ export function DataTable({
               ))}
             </tr>
           ))}
+          {Array.from({ length: padCount }, (_, i) => (
+            <tr key={`pad-${i}`} className="table-row-pad" aria-hidden="true">
+              {columns.map((col) => (
+                <td key={col.key} className={cn('table-td', tableAlignClass(col.align))}>
+                  {'\u00a0'}
+                </td>
+              ))}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
   );
+
+  if (footer) {
+    return (
+      <div className="table-card">
+        {table}
+        {footer}
+      </div>
+    );
+  }
+
+  return table;
 }

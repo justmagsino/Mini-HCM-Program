@@ -16,7 +16,7 @@ import * as adminApi from '../../api/admin.api.js';
 import { getApiErrorMessage } from '../../api/axios.js';
 import { editUserSchema } from '../../schemas/admin.schema.js';
 import { DEFAULT_TIMEZONE } from '../../utils/dates.js';
-import { formatTime } from '../../utils/format.js';
+import { formatDateLabel, formatTime } from '../../utils/format.js';
 
 const DEFAULT_SHIFT = { start: '09:00', end: '18:00' };
 
@@ -169,7 +169,11 @@ export function EmployeeDetailPage() {
       >
         <DataTable
           columns={[
-            { key: 'date', label: 'Date' },
+            {
+              key: 'date',
+              label: 'Date',
+              render: (row) => formatDateLabel(row.date),
+            },
             {
               key: 'timeIn',
               label: 'In',

@@ -79,6 +79,15 @@ export async function patchAttendance(userId, date, body) {
 }
 
 /**
+ * @param {string} userId
+ * @param {string} date
+ * @param {{ reason: string }} body
+ */
+export async function deleteAttendance(userId, date, body) {
+  await api.delete(`/admin/attendance/${userId}/${date}`, { data: body });
+}
+
+/**
  * @param {{ date: string; role?: 'employee' | 'admin' }} params
  */
 export async function getTeamDailyReport(params) {
@@ -91,19 +100,24 @@ export async function getTeamWeeklyReport(params) {
   return data;
 }
 
-export async function getExceptionsReport(params) {
-  const { data } = await api.get('/admin/reports/exceptions', { params });
-  return data.items;
+/**
+ * @param {{
+ *   from: string;
+ *   to: string;
+ *   role?: 'employee' | 'admin';
+ *   q?: string;
+ *   page?: number;
+ *   limit?: number;
+ * }} params
+ */
+export async function getTeamRangeReport(params) {
+  const { data } = await api.get('/admin/reports/range', { params });
+  return data;
 }
 
 /**
  * @param {{ from: string; to: string; role?: 'employee' | 'admin' }} params
  */
-export async function getAttendanceExportReport(params) {
-  const { data } = await api.get('/admin/reports/export', { params });
-  return data;
-}
-
 export async function getAdminDailySummary(params) {
   const { data } = await api.get('/admin/summaries/daily', { params });
   return data.data;

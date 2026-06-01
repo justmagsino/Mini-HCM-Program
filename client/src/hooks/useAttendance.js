@@ -5,12 +5,19 @@ import { getWorkDateForTimezone, subtractDaysFromDateString } from '../utils/dat
 import { useAuthState } from './useAuth.js';
 import { useProfileTimezone } from './useProfileTimezone.js';
 
+export const ATTENDANCE_HISTORY_PAGE_SIZE = 10;
+
 export function useAttendance() {
   const { profile } = useAuthState();
   const timezone = useProfileTimezone();
 
   const [today, setToday] = useState(null);
-  const [history, setHistory] = useState({ items: [], page: 1, limit: 31, total: 0 });
+  const [history, setHistory] = useState({
+    items: [],
+    page: 1,
+    limit: ATTENDANCE_HISTORY_PAGE_SIZE,
+    total: 0,
+  });
   const [historyRange, setHistoryRange] = useState({ from: '', to: '' });
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -23,7 +30,7 @@ export function useAttendance() {
     return data;
   }, []);
 
-  const loadHistory = useCallback(async (range) => {
+  const loadHistory = useCallback(async (range, page = 1) => {
     if (!range?.from || !range?.to) {
       return;
     }
@@ -32,8 +39,8 @@ export function useAttendance() {
       const result = await attendanceApi.getHistory({
         from: range.from,
         to: range.to,
-        page: 1,
-        limit: 93,
+        page,
+        limit: ATTENDANCE_HISTORY_PAGE_SIZE,
       });
       setHistory(result);
       setHistoryRange(range);
@@ -46,13 +53,13 @@ export function useAttendance() {
     setError('');
     setLoading(true);
     try {
-      await Promise.all([loadToday(), loadHistory(historyRange)]);
+      await Promise.all([loadToday(), loadHistory(historyRange, history.page)]);
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [loadToday, loadHistory, historyRange]);
+  }, [loadToday, loadHistory, historyRange, history.page]);
 
   useEffect(() => {
     if (!profile) {
@@ -84,7 +91,7 @@ export function useAttendance() {
     try {
       const attendance = await attendanceApi.punchIn();
       setToday(attendance);
-      await loadHistory(historyRange);
+      await loadHistory(historyRange, history.page);
       return attendance;
     } catch (err) {
       setError(getApiErrorMessage(err));
@@ -92,7 +99,7 @@ export function useAttendance() {
     } finally {
       setActionLoading(false);
     }
-  }, [loadHistory, historyRange]);
+  }, [loadHistory, historyRange, history.page]);
 
   const punchOut = useCallback(async () => {
     setActionLoading(true);
@@ -100,7 +107,7 @@ export function useAttendance() {
     try {
       const result = await attendanceApi.punchOut();
       setToday(result.attendance);
-      await loadHistory(historyRange);
+      await loadHistory(historyRange, history.page);
       return result;
     } catch (err) {
       setError(getApiErrorMessage(err));
@@ -108,18 +115,30 @@ export function useAttendance() {
     } finally {
       setActionLoading(false);
     }
-  }, [loadHistory, historyRange]);
+  }, [loadHistory, historyRange, history.page]);
 
   const applyHistoryFilter = useCallback(
     async (range) => {
       setError('');
       try {
-        await loadHistory(range);
+        await loadHistory(range, 1);
       } catch (err) {
         setError(getApiErrorMessage(err));
       }
     },
     [loadHistory],
+  );
+
+  const changeHistoryPage = useCallback(
+    async (page) => {
+      setError('');
+      try {
+        await loadHistory(historyRange, page);
+      } catch (err) {
+        setError(getApiErrorMessage(err));
+      }
+    },
+    [loadHistory, historyRange],
   );
 
   return {
@@ -137,5 +156,7 @@ export function useAttendance() {
     punchOut,
     refresh,
     applyHistoryFilter,
+    changeHistoryPage,
+    historyPageSize: ATTENDANCE_HISTORY_PAGE_SIZE,
   };
 }

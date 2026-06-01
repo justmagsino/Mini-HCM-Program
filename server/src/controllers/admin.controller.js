@@ -51,6 +51,12 @@ export async function patchAttendance(req, res) {
   return res.status(200).json(result);
 }
 
+export async function deleteAttendance(req, res) {
+  const { userId, date } = req.validated.params;
+  await adminService.deleteAttendance(req.user.uid, userId, date, req.validated.body);
+  return res.status(204).send();
+}
+
 export async function getDashboardKpis(req, res) {
   const { date } = req.validated.query;
   const result = await adminService.getDashboardKpis(date);

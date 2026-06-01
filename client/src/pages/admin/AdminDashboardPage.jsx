@@ -1,9 +1,9 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { PageContainer } from '../../components/ui/PageContainer.jsx';
 import { StatCard } from '../../components/ui/StatCard.jsx';
-import { DataTable } from '../../components/ui/DataTable.jsx';
+import { PaginatedTable } from '../../components/ui/PaginatedTable.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { ChartSkeleton, StatCardSkeleton, TableSkeleton } from '../../components/ui/LoadingSkeleton.jsx';
 import { AttendanceStatusBadge } from '../../components/attendance/AttendanceStatusBadge.jsx';
@@ -15,7 +15,6 @@ import { Button } from '../../components/ui/Button.jsx';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard.js';
 import { getWorkDateForTimezone } from '../../utils/dates.js';
 import { formatHours, formatMinutes, formatTime } from '../../utils/format.js';
-import { ReportExportBar } from '../../components/admin/ReportExportBar.jsx';
 
 const TeamOvertimeChart = lazy(() =>
   import('../../components/charts/TeamOvertimeChart.jsx').then((m) => ({
@@ -23,9 +22,22 @@ const TeamOvertimeChart = lazy(() =>
   })),
 );
 
+const OVERVIEW_PAGE_SIZE = 10;
+
 export function AdminDashboardPage() {
-  const { date, setDate, kpis, roster, exceptions, otChartData, timezone, loading, error, retry } =
+  const { date, setDate, kpis, roster, otChartData, timezone, loading, error, retry } =
     useAdminDashboard();
+
+  const [rosterPage, setRosterPage] = useState(1);
+
+  useEffect(() => {
+    setRosterPage(1);
+  }, [date]);
+
+  const rosterRows = useMemo(() => {
+    const start = (rosterPage - 1) * OVERVIEW_PAGE_SIZE;
+    return roster.slice(start, start + OVERVIEW_PAGE_SIZE);
+  }, [roster, rosterPage]);
 
   const hasOtData = otChartData.some((d) => d.overtime > 0);
 
@@ -33,7 +45,7 @@ export function AdminDashboardPage() {
     <PageContainer>
       <PageHeader
         title="Admin dashboard"
-        description="KPIs, today's roster, and weekly overtime."
+        description="KPIs, today attendance, and weekly overtime."
         actions={
           <>
             <FormField htmlFor="dashboard-date" className="mb-0 shrink-0">
@@ -62,8 +74,6 @@ export function AdminDashboardPage() {
       />
 
       <ErrorBanner message={error} onRetry={retry} />
-
-      <ReportExportBar />
 
       {loading ? (
         <>
@@ -103,14 +113,19 @@ export function AdminDashboardPage() {
           )}
 
           <Section
-            title="Today's roster"
+            title="Today attendance"
             actions={
-              <Link to="/admin/attendance" className="link-primary text-sm">
-                Manage attendance →
-              </Link>
+              <>
+                <Link to="/admin/reports" className="link-primary text-sm">
+                  Reports →
+                </Link>
+                <Link to="/admin/attendance" className="link-primary text-sm">
+                  Manage attendance →
+                </Link>
+              </>
             }
           >
-            <DataTable
+            <PaginatedTable
               columns={[
                 { key: 'fullName', label: 'Employee' },
                 {
@@ -162,48 +177,15 @@ export function AdminDashboardPage() {
                   ),
                 },
               ]}
-              rows={roster}
+              rows={rosterRows}
               rowKey={(row) => row.userId}
+              page={rosterPage}
+              limit={OVERVIEW_PAGE_SIZE}
+              total={roster.length}
+              onPageChange={setRosterPage}
               emptyTitle="No employees"
               emptyMessage="No employees found."
             />
-          </Section>
-
-          <Section
-            title="Tardiness this week"
-            actions={
-              <Link to="/admin/reports" className="link-primary text-sm">
-                Reports →
-              </Link>
-            }
-          >
-            {exceptions.length ? (
-              <DataTable
-                columns={[
-                  { key: 'fullName', label: 'Employee' },
-                  { key: 'date', label: 'Date' },
-                  {
-                    key: 'totalLateMinutes',
-                    label: 'Late',
-                    render: (row) => formatMinutes(row.totalLateMinutes),
-                  },
-                  {
-                    key: 'totalUndertimeMinutes',
-                    label: 'Undertime',
-                    render: (row) => formatMinutes(row.totalUndertimeMinutes),
-                  },
-                ]}
-                rows={exceptions}
-                rowKey={(row) => `${row.userId}_${row.date}`}
-                emptyTitle="No tardiness"
-                emptyMessage="No late/undertime alerts this week."
-              />
-            ) : (
-              <EmptyState
-                title="No tardiness"
-                description="No late/undertime alerts this week."
-              />
-            )}
           </Section>
         </>
       )}

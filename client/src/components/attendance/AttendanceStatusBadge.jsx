@@ -10,14 +10,25 @@ const STATUS_LABELS = {
   absent: 'Absent',
 };
 
+const HISTORY_STATUS_LABELS = {
+  open: 'In',
+  closed: 'Present',
+  absent: 'Absent',
+};
+
 /**
- * @param {{ status: string; showAbsentLabel?: boolean }}
+ * @param {{ status: string; showAbsentLabel?: boolean; variant?: 'default' | 'history' }}
  */
-export function AttendanceStatusBadge({ status, showAbsentLabel = true }) {
+export function AttendanceStatusBadge({
+  status,
+  showAbsentLabel = true,
+  variant = 'default',
+}) {
+  const labels = variant === 'history' ? HISTORY_STATUS_LABELS : STATUS_LABELS;
   const label =
     status === 'absent' && showAbsentLabel
-      ? STATUS_LABELS.absent
-      : (STATUS_LABELS[status] ?? status);
+      ? labels.absent
+      : (labels[status] ?? status);
 
   return (
     <span

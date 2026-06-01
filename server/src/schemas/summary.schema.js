@@ -49,22 +49,15 @@ export const adminWeeklyReportQuerySchema = z.object({
   }),
 });
 
-export const exceptionsQuerySchema = z
+export const adminRangeReportQuerySchema = z
   .object({
     query: z.object({
       from: z.string().regex(DATE_REGEX, 'from must be YYYY-MM-DD'),
       to: z.string().regex(DATE_REGEX, 'to must be YYYY-MM-DD'),
       role: reportRoleField,
-    }),
-  })
-  .superRefine(refineQueryHistoryRange);
-
-export const exportReportQuerySchema = z
-  .object({
-    query: z.object({
-      from: z.string().regex(DATE_REGEX, 'from must be YYYY-MM-DD'),
-      to: z.string().regex(DATE_REGEX, 'to must be YYYY-MM-DD'),
-      role: reportRoleField,
+      q: z.string().max(200).optional(),
+      page: z.coerce.number().int().positive().optional().default(1),
+      limit: z.coerce.number().int().positive().max(100).optional().default(10),
     }),
   })
   .superRefine(refineQueryHistoryRange);

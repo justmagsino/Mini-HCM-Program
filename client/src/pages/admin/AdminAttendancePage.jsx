@@ -6,6 +6,7 @@ import { PaginatedTable } from '../../components/ui/PaginatedTable.jsx';
 import { AttendanceStatusBadge } from '../../components/attendance/AttendanceStatusBadge.jsx';
 import { ErrorBanner } from '../../components/ui/ErrorBanner.jsx';
 import { FilterBar } from '../../components/ui/FilterBar.jsx';
+import { TableWithToolbar } from '../../components/ui/TableWithToolbar.jsx';
 import { Input } from '../../components/ui/Input.jsx';
 import { Select } from '../../components/ui/Select.jsx';
 import * as adminApi from '../../api/admin.api.js';
@@ -13,7 +14,7 @@ import { getApiErrorMessage } from '../../api/axios.js';
 import { getWorkDateForTimezone } from '../../utils/dates.js';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { useProfileTimezone } from '../../hooks/useProfileTimezone.js';
-import { formatTime } from '../../utils/format.js';
+import { formatDateLabel, formatTime } from '../../utils/format.js';
 
 const PAGE_SIZE = 10;
 
@@ -74,64 +75,71 @@ export function AdminAttendancePage() {
 
       <ErrorBanner message={error} onRetry={load} />
 
-      <FilterBar>
-        <Input
-          type="search"
-          placeholder="Filter by name or email"
-          value={qInput}
-          onChange={(e) => {
-            setPage(1);
-            setQInput(e.target.value);
-          }}
-          inputSize="sm"
-          className="min-w-[180px] flex-1"
-          aria-label="Search attendance"
-        />
-        <Select
-          value={role}
-          onChange={(e) => {
-            setPage(1);
-            setRole(e.target.value);
-          }}
-          inputSize="sm"
-          className="w-auto min-w-[9rem] shrink-0"
-          aria-label="Filter by role"
-        >
-          <option value="">All</option>
-          <option value="employee">Employee</option>
-          <option value="admin">Admin</option>
-        </Select>
-        <Input
-          type="date"
-          value={date}
-          onChange={(e) => {
-            setPage(1);
-            setDate(e.target.value);
-          }}
-          inputSize="sm"
-          className="w-auto shrink-0"
-          aria-label="Filter by date"
-        />
-        <Select
-          value={status}
-          onChange={(e) => {
-            setPage(1);
-            setStatus(e.target.value);
-          }}
-          inputSize="sm"
-          className="w-auto min-w-[10rem] shrink-0"
-          aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          <option value="open">Open</option>
-          <option value="closed">Closed</option>
-        </Select>
-      </FilterBar>
-
-      <PaginatedTable
-        columns={[
-          { key: 'fullName', label: 'Employee' },
-          { key: 'date', label: 'Date', align: 'center' },
+      <TableWithToolbar
+        toolbar={
+          <FilterBar>
+            <Input
+              type="search"
+              placeholder="Filter by name or email"
+              value={qInput}
+              onChange={(e) => {
+                setPage(1);
+                setQInput(e.target.value);
+              }}
+              inputSize="sm"
+              className="min-w-[180px] flex-1"
+              aria-label="Search attendance"
+            />
+            <Select
+              value={role}
+              onChange={(e) => {
+                setPage(1);
+                setRole(e.target.value);
+              }}
+              inputSize="sm"
+              className="w-auto min-w-[9rem] shrink-0"
+              aria-label="Filter by role"
+            >
+              <option value="">All</option>
+              <option value="employee">Employee</option>
+              <option value="admin">Admin</option>
+            </Select>
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => {
+                setPage(1);
+                setDate(e.target.value);
+              }}
+              inputSize="sm"
+              className="w-auto shrink-0"
+              aria-label="Filter by date"
+            />
+            <Select
+              value={status}
+              onChange={(e) => {
+                setPage(1);
+                setStatus(e.target.value);
+              }}
+              inputSize="sm"
+              className="w-auto min-w-[10rem] shrink-0"
+              aria-label="Filter by status"
+            >
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+            </Select>
+          </FilterBar>
+        }
+      >
+        <PaginatedTable
+          columns={[
+            { key: 'fullName', label: 'Employee' },
+            {
+              key: 'date',
+              label: 'Date',
+              render: (row) => formatDateLabel(row.date),
+            },
           {
             key: 'timeIn',
             label: 'In',
@@ -179,7 +187,8 @@ export function AdminAttendancePage() {
         onPageChange={setPage}
         emptyTitle="No records"
         emptyMessage="No attendance records for these filters."
-      />
+        />
+      </TableWithToolbar>
     </PageContainer>
   );
 }

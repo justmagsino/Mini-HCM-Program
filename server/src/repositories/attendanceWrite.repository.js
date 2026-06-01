@@ -46,11 +46,30 @@ function mapAttendanceFromWrite(attendanceData, hadExisting) {
  *   totalUndertimeMinutes: number;
  * }} summaryPayload
  */
+/**
+ * @param {string} userId
+ * @param {string} date YYYY-MM-DD
+ */
+export async function deleteAttendanceWithSummary(userId, date) {
+  const batch = db.batch();
+  batch.delete(db.collection(ATTENDANCE).doc(buildAttendanceId(userId, date)));
+  batch.delete(db.collection(DAILY_SUMMARY).doc(buildDailySummaryId(userId, date)));
+  await batch.commit();
+}
+
+/**
+ * @param {string} userId
+ * @param {string} date YYYY-MM-DD
+ * @param {object} attendancePayload
+ * @param {object} summaryPayload
+ * @param {object} [correctionMeta]
+ */
 export async function closeAttendanceWithSummary(
   userId,
   date,
   attendancePayload,
   summaryPayload,
+  correctionMeta = null,
 ) {
   const attRef = db.collection(ATTENDANCE).doc(buildAttendanceId(userId, date));
   const sumRef = db.collection(DAILY_SUMMARY).doc(buildDailySummaryId(userId, date));
@@ -69,6 +88,7 @@ export async function closeAttendanceWithSummary(
     nightDifferentialHours: attendancePayload.nightDifferentialHours,
     lateMinutes: attendancePayload.lateMinutes,
     undertimeMinutes: attendancePayload.undertimeMinutes,
+    ...(correctionMeta ?? {}),
   };
 
   if (existing.exists) {

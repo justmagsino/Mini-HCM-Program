@@ -104,6 +104,18 @@ export const patchAttendanceBodySchema = z.object({
   body: attendanceMutationBodySchema,
 });
 
+export const deleteAttendanceParamsSchema = z.object({
+  params: z.object({
+    userId: firebaseUid,
+    date: z.string().regex(DATE_REGEX),
+  }),
+  body: z
+    .object({
+      reason: z.string().trim().min(10).max(500),
+    })
+    .strict(),
+});
+
 export const dashboardKpisQuerySchema = z.object({
   query: z.object({
     date: dateQueryField,

@@ -5,6 +5,7 @@ import { PageContainer } from '../../components/ui/PageContainer.jsx';
 import { PaginatedTable } from '../../components/ui/PaginatedTable.jsx';
 import { ErrorBanner } from '../../components/ui/ErrorBanner.jsx';
 import { FilterBar } from '../../components/ui/FilterBar.jsx';
+import { TableWithToolbar } from '../../components/ui/TableWithToolbar.jsx';
 import { Input } from '../../components/ui/Input.jsx';
 import { Select } from '../../components/ui/Select.jsx';
 import { Button } from '../../components/ui/Button.jsx';
@@ -108,100 +109,105 @@ export function EmployeesPage() {
       {successMessage && <Alert variant="success">{successMessage}</Alert>}
       <ErrorBanner message={error} onRetry={load} />
 
-      <FilterBar>
-        <Input
-          type="search"
-          placeholder="Search name or email"
-          value={qInput}
-          onChange={(e) => {
-            setPage(1);
-            setQInput(e.target.value);
-          }}
-          inputSize="sm"
-          className="min-w-[200px] flex-1"
-          aria-label="Search employees"
+      <TableWithToolbar
+        toolbar={
+          <FilterBar>
+            <Input
+              type="search"
+              placeholder="Search name or email"
+              value={qInput}
+              onChange={(e) => {
+                setPage(1);
+                setQInput(e.target.value);
+              }}
+              inputSize="sm"
+              className="min-w-[200px] flex-1"
+              aria-label="Search employees"
+            />
+            <Select
+              value={role}
+              onChange={(e) => {
+                setPage(1);
+                setRole(e.target.value);
+              }}
+              inputSize="sm"
+              className="w-auto min-w-[10rem]"
+              aria-label="Filter by role"
+            >
+              <option value="">All</option>
+              <option value="employee">Employee</option>
+              <option value="admin">Admin</option>
+            </Select>
+          </FilterBar>
+        }
+      >
+        <PaginatedTable
+          columns={[
+            {
+              key: 'fullName',
+              label: 'Name',
+              render: (row) => (
+                <Link to={`/admin/employees/${row.uid}`} className="link-primary">
+                  {row.fullName}
+                </Link>
+              ),
+            },
+            { key: 'email', label: 'Email' },
+            {
+              key: 'role',
+              label: 'Role',
+              render: (row) => formatUserRole(row.role),
+            },
+            {
+              key: 'schedule',
+              label: 'Shift',
+              render: (row) => `${row.schedule?.start} – ${row.schedule?.end}`,
+            },
+            {
+              key: 'actions',
+              label: 'Actions',
+              align: 'center',
+              render: (row) => (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Select
+                    value={row.role}
+                    onChange={(e) => handleRoleChange(row.uid, e.target.value)}
+                    disabled={
+                      loading || roleUpdatingUid === row.uid || passwordResettingUid === row.uid
+                    }
+                    inputSize="sm"
+                    className="w-auto min-w-[7rem]"
+                    aria-label={`Change role for ${row.fullName}`}
+                  >
+                    <option value="employee">Employee</option>
+                    <option value="admin">Admin</option>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    disabled={
+                      loading || roleUpdatingUid === row.uid || passwordResettingUid === row.uid
+                    }
+                    onClick={() => handleResetPassword(row)}
+                  >
+                    {passwordResettingUid === row.uid ? 'Resetting…' : 'Reset password'}
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+          rows={data.items}
+          rowKey={(row) => row.uid}
+          loading={loading}
+          page={page}
+          limit={data.limit}
+          total={data.total}
+          onPageChange={setPage}
+          emptyTitle="No employees found"
+          emptyMessage="No employees match your search."
         />
-        <Select
-          value={role}
-          onChange={(e) => {
-            setPage(1);
-            setRole(e.target.value);
-          }}
-          inputSize="sm"
-          className="w-auto min-w-[10rem]"
-          aria-label="Filter by role"
-        >
-          <option value="">All</option>
-          <option value="employee">Employee</option>
-          <option value="admin">Admin</option>
-        </Select>
-      </FilterBar>
-
-      <PaginatedTable
-        columns={[
-          {
-            key: 'fullName',
-            label: 'Name',
-            render: (row) => (
-              <Link to={`/admin/employees/${row.uid}`} className="link-primary">
-                {row.fullName}
-              </Link>
-            ),
-          },
-          { key: 'email', label: 'Email' },
-          {
-            key: 'role',
-            label: 'Role',
-            render: (row) => formatUserRole(row.role),
-          },
-          {
-            key: 'schedule',
-            label: 'Shift',
-            render: (row) => `${row.schedule?.start} – ${row.schedule?.end}`,
-          },
-          {
-            key: 'actions',
-            label: 'Actions',
-            render: (row) => (
-              <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  value={row.role}
-                  onChange={(e) => handleRoleChange(row.uid, e.target.value)}
-                  disabled={
-                    loading || roleUpdatingUid === row.uid || passwordResettingUid === row.uid
-                  }
-                  inputSize="sm"
-                  className="w-auto min-w-[7rem]"
-                  aria-label={`Change role for ${row.fullName}`}
-                >
-                  <option value="employee">Employee</option>
-                  <option value="admin">Admin</option>
-                </Select>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={
-                    loading || roleUpdatingUid === row.uid || passwordResettingUid === row.uid
-                  }
-                  onClick={() => handleResetPassword(row)}
-                >
-                  {passwordResettingUid === row.uid ? 'Resetting…' : 'Reset password'}
-                </Button>
-              </div>
-            ),
-          },
-        ]}
-        rows={data.items}
-        rowKey={(row) => row.uid}
-        loading={loading}
-        page={page}
-        limit={data.limit}
-        total={data.total}
-        onPageChange={setPage}
-        emptyTitle="No employees found"
-        emptyMessage="No employees match your search."
-      />
+      </TableWithToolbar>
     </PageContainer>
   );
 }

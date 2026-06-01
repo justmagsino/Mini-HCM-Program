@@ -41,6 +41,12 @@ export function mapAttendanceDocToDto(doc) {
     dto.undertimeMinutes = data.undertimeMinutes ?? 0;
   }
 
+  if (data.lastCorrectionReason) {
+    dto.lastCorrectionReason = data.lastCorrectionReason;
+    dto.lastCorrectedAt = data.lastCorrectedAt?.toDate?.()?.toISOString() ?? null;
+    dto.lastCorrectedBy = data.lastCorrectedBy ?? null;
+  }
+
   return dto;
 }
 

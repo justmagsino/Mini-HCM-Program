@@ -1,3 +1,4 @@
+import { Timestamp } from 'firebase-admin/firestore';
 import { env } from '../config/env.js';
 import { adminAuth } from '../config/firebaseAdmin.js';
 import { AppError } from '../utils/errors.js';
@@ -19,6 +20,18 @@ import { invalidateUserCache } from '../middleware/userCache.middleware.js';
 import { aggregateTotals } from '../utils/summaryAggregate.js';
 
 const RECENT_ATTENDANCE_DAYS = 14;
+
+/**
+ * @param {string} adminUid
+ * @param {string} reason
+ */
+function buildCorrectionMeta(adminUid, reason) {
+  return {
+    lastCorrectionReason: reason,
+    lastCorrectedAt: Timestamp.now(),
+    lastCorrectedBy: adminUid,
+  };
+}
 
 /**
  * @param {{ q?: string; role?: string; page?: number; limit?: number }} query
@@ -245,6 +258,7 @@ export async function createAttendance(adminUid, body) {
     body.date,
     { timeIn, timeOut, ...metrics },
     metricsToSummaryPayload(metrics),
+    buildCorrectionMeta(adminUid, body.reason),
   );
 
   console.info(
@@ -294,6 +308,7 @@ export async function patchAttendance(adminUid, userId, date, body) {
     date,
     { timeIn, timeOut, ...metrics },
     metricsToSummaryPayload(metrics),
+    buildCorrectionMeta(adminUid, body.reason),
   );
 
   console.info(
@@ -307,6 +322,40 @@ export async function patchAttendance(adminUid, userId, date, body) {
   );
 
   return { attendance, dailySummary };
+}
+
+/**
+ * @param {string} adminUid
+ * @param {string} userId
+ * @param {string} date
+ * @param {{ reason: string }} body
+ */
+export async function deleteAttendance(adminUid, userId, date, body) {
+  const user = await usersRepository.getUserById(userId);
+  if (!user) {
+    throw new AppError(404, 'USER_NOT_FOUND', 'User not found');
+  }
+
+  const existing = await attendanceRepository.getById(userId, date);
+  if (!existing) {
+    throw new AppError(404, 'ATTENDANCE_NOT_FOUND', 'Attendance not found');
+  }
+
+  await attendanceWriteRepository.deleteAttendanceWithSummary(userId, date);
+
+  console.info(
+    JSON.stringify({
+      action: 'admin.attendance.delete',
+      adminUid,
+      userId,
+      date,
+      reason: body.reason,
+      deletedTimeIn: existing.timeIn,
+      deletedTimeOut: existing.timeOut,
+    }),
+  );
+
+  return { ok: true };
 }
 
 /**

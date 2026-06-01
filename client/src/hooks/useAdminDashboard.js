@@ -12,7 +12,6 @@ export function useAdminDashboard() {
   const [kpis, setKpis] = useState(null);
   const [roster, setRoster] = useState([]);
   const [weeklyReport, setWeeklyReport] = useState(null);
-  const [exceptions, setExceptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -24,15 +23,13 @@ export function useAdminDashboard() {
     setError('');
 
     try {
-      const [dayOverview, weekly, exc] = await Promise.all([
+      const [dayOverview, weekly] = await Promise.all([
         adminApi.getDayOverview(date),
         adminApi.getTeamWeeklyReport({ weekStart, page: 1, limit: 100 }),
-        adminApi.getExceptionsReport({ from: weekStart, to: date }),
       ]);
       setKpis(dayOverview.kpis);
       setRoster(dayOverview.roster);
       setWeeklyReport(weekly);
-      setExceptions(exc);
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
@@ -54,7 +51,6 @@ export function useAdminDashboard() {
     setDate,
     kpis,
     roster,
-    exceptions,
     otChartData,
     timezone,
     loading,

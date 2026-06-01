@@ -37,6 +37,15 @@ const DEMO_ADMIN = {
   email: 'admin@demo.test',
 };
 
+/** Night-shift demo workers (22:00–06:00) — produce non-zero ND in reports */
+const NIGHT_SHIFT_EMAILS = new Set([
+  'employee8@demo.test',
+  'employee9@demo.test',
+  'employee10@demo.test',
+]);
+
+const NIGHT_SHIFT_SCHEDULE = { start: '22:00', end: '06:00' };
+
 /** Previous seed script emails — removed when using `--reset` */
 const LEGACY_DEMO_EMAILS = [
   'admin@demo.mini-hcm.test',
@@ -122,7 +131,12 @@ async function loadModules() {
     attendanceWriteRepository,
     { calculateAttendanceMetrics },
     { metricsToSummaryPayload },
-    { getWorkDateForTimezone, subtractDaysFromDateString, zonedTimeToUtc },
+    {
+      getWorkDateForTimezone,
+      subtractDaysFromDateString,
+      addDaysToDateString,
+      zonedTimeToUtc,
+    },
   ] = await Promise.all([
     import(firebaseAdminPath),
     import(pathToFileURL(join(serverRoot, 'src', 'config', 'env.js')).href),
@@ -145,6 +159,7 @@ async function loadModules() {
     metricsToSummaryPayload,
     getWorkDateForTimezone,
     subtractDaysFromDateString,
+    addDaysToDateString,
     zonedTimeToUtc,
   };
 }
@@ -198,7 +213,9 @@ async function resetDemoUsers(ctx, emails) {
  */
 async function ensureAuthAndProfile(ctx, spec, rng, dryRun) {
   const timezone = ctx.env.DEFAULT_TIMEZONE;
-  const schedule = randomSchedule(rng);
+  const schedule = NIGHT_SHIFT_EMAILS.has(spec.email)
+    ? NIGHT_SHIFT_SCHEDULE
+    : randomSchedule(rng);
 
   if (dryRun) {
     return { uid: `dry-${spec.email}`, email: spec.email, fullName: spec.fullName, role: spec.role };
@@ -286,25 +303,37 @@ async function seedAttendance(ctx, employees, rng, dates, dryRun) {
         continue;
       }
 
-      const [sh, sm] = user.schedule.start.split(':').map(Number);
-      const [eh, em] = user.schedule.end.split(':').map(Number);
-      const shiftStartMin = sh * 60 + sm;
-      const shiftEndMin = eh * 60 + em;
-      const inOffset = Math.floor(rng() * 75) - 15;
-      const outOffset = Math.floor(rng() * 150) - 30;
+      const isNightShift = NIGHT_SHIFT_EMAILS.has(user.email);
+      let timeIn;
+      let timeOut;
 
-      const timeIn = ctx.zonedTimeToUtc(
-        date,
-        minutesToHHmm(shiftStartMin + inOffset),
-        user.timezone,
-      );
-      let timeOut = ctx.zonedTimeToUtc(
-        date,
-        minutesToHHmm(shiftEndMin + outOffset),
-        user.timezone,
-      );
-      if (timeOut.getTime() <= timeIn.getTime()) {
-        timeOut = ctx.zonedTimeToUtc(date, minutesToHHmm(shiftEndMin + 60), user.timezone);
+      if (isNightShift) {
+        const inMin = 22 * 60 + Math.floor(rng() * 45);
+        const outMin = 5 * 60 + 30 + Math.floor(rng() * 75);
+        const nextDate = ctx.addDaysToDateString(date, 1);
+        timeIn = ctx.zonedTimeToUtc(date, minutesToHHmm(inMin), user.timezone);
+        timeOut = ctx.zonedTimeToUtc(nextDate, minutesToHHmm(outMin), user.timezone);
+      } else {
+        const [sh, sm] = user.schedule.start.split(':').map(Number);
+        const [eh, em] = user.schedule.end.split(':').map(Number);
+        const shiftStartMin = sh * 60 + sm;
+        const shiftEndMin = eh * 60 + em;
+        const inOffset = Math.floor(rng() * 75) - 15;
+        let outOffset = Math.floor(rng() * 150) - 30;
+
+        timeIn = ctx.zonedTimeToUtc(
+          date,
+          minutesToHHmm(shiftStartMin + inOffset),
+          user.timezone,
+        );
+        let outMin = shiftEndMin + outOffset;
+        if (rng() < 0.22) {
+          outMin = Math.max(outMin, 22 * 60 + Math.floor(rng() * 90));
+        }
+        timeOut = ctx.zonedTimeToUtc(date, minutesToHHmm(outMin), user.timezone);
+        if (timeOut.getTime() <= timeIn.getTime()) {
+          timeOut = ctx.zonedTimeToUtc(date, minutesToHHmm(shiftEndMin + 60), user.timezone);
+        }
       }
 
       const metrics = ctx.calculateAttendanceMetrics({
