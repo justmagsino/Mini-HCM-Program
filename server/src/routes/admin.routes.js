@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import { asyncHandler } from '../utils/errors.js';
+import { adminWriteLimiter } from '../middleware/rateLimiters.js';
 import { authenticate, requireUser } from '../middleware/auth.middleware.js';
 import { requireVerifiedEmail } from '../middleware/emailVerified.middleware.js';
 import { requireAdmin } from '../middleware/role.middleware.js';
@@ -25,13 +25,6 @@ import * as reportController from '../controllers/report.controller.js';
 import * as adminController from '../controllers/admin.controller.js';
 
 const router = Router();
-
-const adminWriteLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 router.use(
   asyncHandler(authenticate),

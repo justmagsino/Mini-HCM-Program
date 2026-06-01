@@ -66,23 +66,33 @@ export const searchAttendanceQuerySchema = z
     path: ['query', 'date'],
   });
 
-export const attendanceMutationBodySchema = z
+const attendanceMutationBaseSchema = z
   .object({
     timeIn: z.string().datetime({ message: 'timeIn must be ISO 8601' }),
     timeOut: z.string().datetime({ message: 'timeOut must be ISO 8601' }),
     reason: z.string().trim().min(10).max(500),
   })
-  .strict()
-  .refine((body) => new Date(body.timeOut) > new Date(body.timeIn), {
+  .strict();
+
+/** @param {z.ZodObject<any>} schema */
+function withAttendanceTimeOrder(schema) {
+  return schema.refine((body) => new Date(body.timeOut) > new Date(body.timeIn), {
     message: 'timeOut must be after timeIn',
     path: ['timeOut'],
   });
+}
+
+export const attendanceMutationBodySchema = withAttendanceTimeOrder(
+  attendanceMutationBaseSchema,
+);
 
 export const createAttendanceBodySchema = z.object({
-  body: attendanceMutationBodySchema.extend({
-    userId: firebaseUid,
-    date: z.string().regex(DATE_REGEX),
-  }),
+  body: withAttendanceTimeOrder(
+    attendanceMutationBaseSchema.extend({
+      userId: firebaseUid,
+      date: z.string().regex(DATE_REGEX),
+    }),
+  ),
 });
 
 export const patchAttendanceBodySchema = z.object({

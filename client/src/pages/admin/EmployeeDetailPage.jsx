@@ -15,7 +15,10 @@ import { Section } from '../../components/ui/Section.jsx';
 import * as adminApi from '../../api/admin.api.js';
 import { getApiErrorMessage } from '../../api/axios.js';
 import { editUserSchema } from '../../schemas/admin.schema.js';
+import { DEFAULT_TIMEZONE } from '../../utils/dates.js';
 import { formatTime } from '../../utils/format.js';
+
+const DEFAULT_SHIFT = { start: '09:00', end: '18:00' };
 
 export function EmployeeDetailPage() {
   const { uid } = useParams();
@@ -39,18 +42,23 @@ export function EmployeeDetailPage() {
     try {
       const data = await adminApi.getUser(uid);
       setDetail(data);
+      const schedule = data.user.schedule ?? DEFAULT_SHIFT;
       reset({
-        fullName: data.user.fullName,
-        timezone: data.user.timezone,
-        scheduleStart: data.user.schedule.start,
-        scheduleEnd: data.user.schedule.end,
+        fullName: data.user.fullName ?? '',
+        timezone: data.user.timezone ?? DEFAULT_TIMEZONE,
+        scheduleStart: schedule.start ?? DEFAULT_SHIFT.start,
+        scheduleEnd: schedule.end ?? DEFAULT_SHIFT.end,
       });
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      const message =
+        err && typeof err === 'object' && 'response' in err
+          ? getApiErrorMessage(err)
+          : (err?.message ?? 'Failed to load employee');
+      setError(message);
     } finally {
       setLoading(false);
     }
-  }, [uid, reset]);
+  }, [uid]);
 
   useEffect(() => {
     load();
@@ -88,7 +96,8 @@ export function EmployeeDetailPage() {
     );
   }
 
-  const { user, recentAttendance } = detail;
+  const { user, recentAttendance = [] } = detail;
+  const displayTimezone = user.timezone ?? DEFAULT_TIMEZONE;
 
   return (
     <PageContainer>
@@ -164,12 +173,12 @@ export function EmployeeDetailPage() {
             {
               key: 'timeIn',
               label: 'In',
-              render: (row) => formatTime(row.timeIn, user.timezone),
+              render: (row) => formatTime(row.timeIn, displayTimezone),
             },
             {
               key: 'timeOut',
               label: 'Out',
-              render: (row) => formatTime(row.timeOut, user.timezone),
+              render: (row) => formatTime(row.timeOut, displayTimezone),
             },
             { key: 'status', label: 'Status' },
             {

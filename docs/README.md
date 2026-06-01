@@ -10,6 +10,8 @@ Mini HCM technical specifications and production guides.
 | [../DEPLOYMENT.md](../DEPLOYMENT.md) | Production deployment runbook |
 | [ENVIRONMENT.md](./ENVIRONMENT.md) | Environment variables (client + server) |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System architecture overview |
+| [TESTING.md](./TESTING.md) | Automated tests (`npm test`) |
+| [SIMULATION.md](./SIMULATION.md) | Multi-user usage simulation (`npm run simulate`) |
 
 ## Contracts (source of truth)
 

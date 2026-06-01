@@ -5,8 +5,9 @@
  * Requires server/.env with Firebase Admin credentials.
  */
 import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const envPath = join(root, 'server', '.env');
@@ -44,7 +45,10 @@ if (!uid) {
   process.exit(1);
 }
 
-const { db } = await import(join(root, 'server', 'src', 'config', 'firebaseAdmin.js'));
+const firebaseAdminPath = pathToFileURL(
+  join(root, 'server', 'src', 'config', 'firebaseAdmin.js'),
+).href;
+const { db } = await import(firebaseAdminPath);
 
 const ref = db.collection('users').doc(uid);
 const snap = await ref.get();
@@ -54,6 +58,7 @@ if (!snap.exists) {
   process.exit(1);
 }
 
-const { FieldValue } = await import('firebase-admin/firestore');
+const requireFromServer = createRequire(pathToFileURL(join(root, 'server', 'package.json')).href);
+const { FieldValue } = requireFromServer('firebase-admin/firestore');
 await ref.update({ role: 'admin', updatedAt: FieldValue.serverTimestamp() });
 console.log(`users/${uid} role set to admin.`);

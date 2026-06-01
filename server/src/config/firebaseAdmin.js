@@ -5,6 +5,8 @@ import { env, getFirebasePrivateKey } from './env.js';
 /**
  * Firebase Admin SDK — singleton initialization.
  * Used for Firestore access and ID token verification (auth phase).
+ *
+ * Tests set `globalThis.__MINI_HCM_TEST_MOCK__` before importing the app (see __tests__/helpers/testHarness.js).
  */
 
 function initializeFirebaseAdmin() {
@@ -22,12 +24,28 @@ function initializeFirebaseAdmin() {
   });
 }
 
-const adminApp = initializeFirebaseAdmin();
+function resolveFirebase() {
+  const testMock = globalThis.__MINI_HCM_TEST_MOCK__;
+  if (testMock) {
+    return testMock;
+  }
+
+  const adminApp = initializeFirebaseAdmin();
+  return {
+    admin,
+    adminApp,
+    adminAuth: admin.auth(adminApp),
+    db: getFirestore(adminApp),
+  };
+}
+
+const firebase = resolveFirebase();
 
 /** Firebase Admin Auth (verifyIdToken — used in auth phase). */
-export const adminAuth = admin.auth(adminApp);
+export const adminAuth = firebase.adminAuth;
 
 /** Firestore Admin instance — canonical DB access for users, attendance, dailySummary. */
-export const db = getFirestore(adminApp);
+export const db = firebase.db;
 
-export { admin, adminApp };
+export const adminApp = firebase.adminApp;
+export { admin };

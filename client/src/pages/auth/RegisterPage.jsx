@@ -4,8 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { completeProfileSchema, registerSchema } from '../../schemas/auth.schema.js';
 import { useAuth } from '../../hooks/useAuth.js';
-import { getApiErrorMessage } from '../../api/axios.js';
-import { getFirebaseAuthErrorMessage } from '../../utils/firebaseAuthErrors.js';
+import { getAuthFlowErrorMessage } from '../../utils/firebaseAuthErrors.js';
 import { AuthLayout } from '../../components/ui/AuthLayout.jsx';
 import { FormField } from '../../components/ui/FormField.jsx';
 import { Input } from '../../components/ui/Input.jsx';
@@ -47,7 +46,7 @@ export function RegisterPage() {
       }
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setSubmitError(getFirebaseAuthErrorMessage(err) || getApiErrorMessage(err));
+      setSubmitError(getAuthFlowErrorMessage(err));
     }
   };
 

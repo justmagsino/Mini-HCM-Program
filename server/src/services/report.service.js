@@ -81,10 +81,8 @@ export async function getTeamWeeklyReport(weekStart, timezone, pagination = {}) 
   const page = pagination.page ?? 1;
   const limit = Math.min(pagination.limit ?? 20, 100);
 
-  const employees = await usersRepository.listUsers({
-    role: 'employee',
-    limit: MAX_EMPLOYEE_LIST,
-  });
+  // Include all profiles (employee + admin) so small teams and solo-admin setups still appear in reports.
+  const employees = await usersRepository.listUsers({ limit: MAX_EMPLOYEE_LIST });
   const total = employees.length;
   const start = (page - 1) * limit;
   const pageEmployees = employees.slice(start, start + limit);

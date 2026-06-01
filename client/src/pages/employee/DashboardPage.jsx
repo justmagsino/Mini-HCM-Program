@@ -31,7 +31,7 @@ export function DashboardPage() {
         description="Your attendance status and weekly summary at a glance."
         actions={
           <Link to="/attendance" className="btn-primary btn-md">
-            Punch in / out
+            Go to attendance
           </Link>
         }
       />

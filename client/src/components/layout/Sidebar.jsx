@@ -48,16 +48,16 @@ export function Sidebar({ onNavigate, onClose }) {
               Admin
             </p>
             <NavLink to="/admin/dashboard" className={linkClass} onClick={handleClick}>
-              Admin dashboard
+              Overview
             </NavLink>
             <NavLink to="/admin/employees" className={linkClass} onClick={handleClick}>
               Employees
             </NavLink>
             <NavLink to="/admin/attendance" className={linkClass} onClick={handleClick}>
-              Attendance
+              Punch corrections
             </NavLink>
             <NavLink to="/admin/reports" className={linkClass} onClick={handleClick}>
-              Team reports
+              Daily & weekly reports
             </NavLink>
           </>
         )}

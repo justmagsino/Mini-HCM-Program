@@ -1,0 +1,53 @@
+﻿
+> mini-hcm@0.1.0 simulate
+> node scripts/simulate-hcm.mjs --days=5 --seed=42
+
+
+Mini HCM ΓÇö Employee usage simulation
+  Days: 5 (2026-06-09 ΓåÆ 2026-06-13)
+  Seed: 42
+  Timezone: Asia/Manila
+
+ΓåÆ === REGISTER & LOGIN (simulated Auth + profile API) ===
+ΓåÆ Registered Ana Reyes (sim-emp-01) shift 07:00ΓÇô18:30 ΓÇö login OK (employee)
+ΓåÆ Registered Ben Cruz (sim-emp-02) shift 08:00ΓÇô17:30 ΓÇö login OK (employee)
+ΓåÆ Registered Carla Santos (sim-emp-03) shift 09:30ΓÇô19:30 ΓÇö login OK (employee)
+ΓåÆ Registered Diego Lim (sim-emp-04) shift 08:30ΓÇô18:30 ΓÇö login OK (employee)
+ΓåÆ Registered Ella Gomez (sim-emp-05) shift 07:30ΓÇô19:00 ΓÇö login OK (employee)
+ΓåÆ Registered admin Admin User ΓÇö role admin
+ΓåÆ === PUNCH IN / OUT (simulated sessions ΓåÆ Firestore) ===
+ΓåÆ   Ana Reyes 2026-06-09: IN 06:58 OUT 19:22 | reg 11.5h OT 0.87h late 0m
+ΓåÆ   Ana Reyes 2026-06-10: IN 07:55 OUT 20:03 | reg 10.58h OT 1.55h late 55m
+ΓåÆ   Ana Reyes 2026-06-11: IN 07:47 OUT 19:10 | reg 10.72h OT 0.67h late 47m
+ΓåÆ   Ana Reyes 2026-06-12: absent (no punch)
+ΓåÆ   Ana Reyes 2026-06-13: absent (no punch)
+ΓåÆ   Ben Cruz 2026-06-09: IN 08:47 OUT 19:06 | reg 8.72h OT 1.6h late 47m
+ΓåÆ   Ben Cruz 2026-06-10: IN 08:13 OUT 18:27 | reg 9.28h OT 0.95h late 13m
+ΓåÆ   Ben Cruz 2026-06-11: IN 08:38 OUT 18:47 | reg 8.87h OT 1.28h late 38m
+ΓåÆ   Ben Cruz 2026-06-12: IN 08:18 OUT 17:14 | reg 8.93h OT 0h late 18m
+ΓåÆ   Ben Cruz 2026-06-13: IN 08:18 OUT 17:19 | reg 9.02h OT 0h late 18m
+ΓåÆ   Carla Santos 2026-06-09: IN 09:59 OUT 21:00 | reg 9.52h OT 1.5h late 29m
+ΓåÆ   Carla Santos 2026-06-10: IN 09:31 OUT 19:40 | reg 9.98h OT 0.17h late 1m
+ΓåÆ   Carla Santos 2026-06-11: absent (no punch)
+ΓåÆ   Carla Santos 2026-06-12: IN 09:40 OUT 21:12 | reg 9.83h OT 1.7h late 10m
+ΓåÆ   Carla Santos 2026-06-13: IN 09:29 OUT 21:10 | reg 10h OT 1.67h late 0m
+ΓåÆ   Diego Lim 2026-06-09: IN 08:40 OUT 18:47 | reg 9.83h OT 0.28h late 10m
+ΓåÆ   Diego Lim 2026-06-10: IN 09:28 OUT 18:15 | reg 8.78h OT 0h late 58m
+ΓåÆ   Diego Lim 2026-06-11: IN 09:15 OUT 19:04 | reg 9.25h OT 0.57h late 45m
+ΓåÆ   Diego Lim 2026-06-12: IN 08:37 OUT 18:17 | reg 9.67h OT 0h late 7m
+ΓåÆ   Diego Lim 2026-06-13: IN 08:23 OUT 18:36 | reg 10h OT 0.1h late 0m
+ΓåÆ   Ella Gomez 2026-06-09: IN 08:07 OUT 19:43 | reg 10.88h OT 0.72h late 37m
+ΓåÆ   Ella Gomez 2026-06-10: IN 07:32 OUT 20:14 | reg 11.47h OT 1.23h late 2m
+ΓåÆ   Ella Gomez 2026-06-11: IN 08:16 OUT 20:14 | reg 10.73h OT 1.23h late 46m
+ΓåÆ   Ella Gomez 2026-06-12: IN 07:45 OUT 18:52 | reg 11.12h OT 0h late 15m
+ΓåÆ   Ella Gomez 2026-06-13: IN 07:55 OUT 20:07 | reg 11.08h OT 1.12h late 25m
+ΓåÆ === VERIFICATION ===
+ΓåÆ Firestore (memory): users=6 attendance=22 dailySummary=22
+Γ£ô User count correct (5 employees + 1 admin)
+Γ£ô Attendance document count matches simulated sessions
+Γ£ô dailySummary document count matches closed sessions
+ΓåÆ Per-session metrics: 22/22 OK
+Γ£ô Admin can list 5 employees
+ΓåÆ === SUMMARY ===
+Γ£ô Verification PASSED (26/26 checks, 22 sessions)
+

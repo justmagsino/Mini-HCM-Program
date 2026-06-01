@@ -8,7 +8,7 @@ import * as attendanceWriteRepository from '../repositories/attendanceWrite.repo
 import { metricsToSummaryPayload } from '../utils/metrics.js';
 import { calculateAttendanceMetrics } from './computation.service.js';
 
-const PUNCH_DEBOUNCE_MS = 2000;
+const PUNCH_DEBOUNCE_MS = process.env.NODE_ENV === 'test' ? 0 : 2000;
 /** @type {Map<string, number>} */
 const lastPunchRequestAt = new Map();
 

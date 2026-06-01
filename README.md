@@ -173,7 +173,7 @@ Details: **[docs/03-folder-structure.md](./docs/03-folder-structure.md)**
 | `npm run build:client` | Validate env + production SPA build |
 | `npm run build:server` | Server build (if used by host) |
 | `npm run start:server` | Run production server locally |
-| `npm test` | Server unit tests (computation, aggregates) |
+| `npm test` | Server tests: computation + API feature suite (in-memory Firestore) — see [docs/TESTING.md](./docs/TESTING.md) |
 | `npm run test:all` | Tests + client production build |
 | `npm run check:env` | Validate client + server env files |
 | `npm run deploy:firestore` | Deploy rules, indexes, storage rules |

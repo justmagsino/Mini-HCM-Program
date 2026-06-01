@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { createPrivateKey } from 'node:crypto';
 import { z } from 'zod';
 
 const serverEnvSchema = z.object({
@@ -68,8 +69,25 @@ export const env = parsed;
 
 /**
  * Service account private key with escaped newlines normalized.
+ * Wraps bare base64 bodies with PEM headers when copied without BEGIN/END lines.
  * @returns {string}
  */
 export function getFirebasePrivateKey() {
-  return env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+  let key = env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n').trim();
+
+  if (!key.includes('BEGIN PRIVATE KEY')) {
+    const body = key.replace(/\s+/g, '');
+    const lines = body.match(/.{1,64}/g) ?? [body];
+    key = `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----\n`;
+  }
+
+  try {
+    createPrivateKey(key);
+  } catch {
+    throw new Error(
+      'FIREBASE_PRIVATE_KEY is invalid. In server/.env, paste the full private_key from the service account JSON (quoted, with \\n), including -----BEGIN PRIVATE KEY----- / -----END PRIVATE KEY-----.',
+    );
+  }
+
+  return key;
 }

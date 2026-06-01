@@ -225,8 +225,8 @@ Deploy via `firestore.indexes.json` (`npm run deploy:firestore`):
 |------------|--------|-----|
 | `attendance` | `userId` ASC, `date` DESC | Employee history |
 | `attendance` | `date` ASC, `status` ASC | Admin filter by date/status |
-| `dailySummary` | `userId` ASC, `date` DESC | Weekly aggregation |
-| `dailySummary` | `date` ASC | Admin team daily report |
+| `dailySummary` | `userId` ASC, `date` ASC/DESC | Weekly / range by user |
+| `dailySummary` | `date` only | Auto single-field index (team daily report) |
 | `users` | `role` ASC, `fullName` ASC | Admin employee list (optional) |
 
 Admin search by name: in-memory filter on `fullName` / `email` after query (MVP &lt; 500 users).

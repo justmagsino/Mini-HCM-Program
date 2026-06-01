@@ -1,3 +1,4 @@
+import { env } from '../config/env.js';
 import { AppError } from '../utils/errors.js';
 import {
   getWorkDateForTimezone,
@@ -42,11 +43,30 @@ export async function getUserDetail(uid) {
     throw new AppError(404, 'USER_NOT_FOUND', 'User not found');
   }
 
-  const to = getWorkDateForTimezone(new Date(), user.timezone);
+  const timezone = user.timezone || env.DEFAULT_TIMEZONE;
+  const schedule = user.schedule ?? {
+    start: env.DEFAULT_SHIFT_START,
+    end: env.DEFAULT_SHIFT_END,
+  };
+  const to = getWorkDateForTimezone(new Date(), timezone);
   const from = subtractDays(to, RECENT_ATTENDANCE_DAYS - 1);
-  const recentAttendance = await attendanceRepository.queryByUserAndDateRange(uid, from, to);
 
-  return { user, recentAttendance };
+  let recentAttendance;
+  try {
+    recentAttendance = await attendanceRepository.queryByUserAndDateRange(uid, from, to);
+  } catch (err) {
+    console.error('getUserDetail attendance query failed:', err);
+    throw new AppError(
+      503,
+      'ATTENDANCE_QUERY_FAILED',
+      'Could not load recent attendance. Run npm run deploy:firestore to deploy indexes, then try again.',
+    );
+  }
+
+  return {
+    user: { ...user, timezone, schedule },
+    recentAttendance,
+  };
 }
 
 /**

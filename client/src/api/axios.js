@@ -72,7 +72,16 @@ api.interceptors.response.use(
  * @param {import('axios').AxiosError} error
  */
 export function getApiErrorMessage(error) {
-  return error.response?.data?.error?.message ?? error.message ?? 'Request failed';
+  const apiMessage = error.response?.data?.error?.message;
+  if (apiMessage) {
+    return apiMessage;
+  }
+
+  if (error.response?.status === 429) {
+    return 'Too many requests. Wait a few minutes, or restart the API server if you are testing locally.';
+  }
+
+  return error.message ?? 'Request failed';
 }
 
 /**

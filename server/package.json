@@ -13,7 +13,7 @@
     "lint": "eslint src --max-warnings 0",
     "format": "prettier --write \"src/**/*.js\"",
     "format:check": "prettier --check \"src/**/*.js\"",
-    "test": "node --test src/__tests__/*.test.js",
+    "test": "node --test --test-concurrency=1 src/__tests__/**/*.test.js",
     "check:env": "node ../scripts/check-server-env.mjs"
   },
   "dependencies": {

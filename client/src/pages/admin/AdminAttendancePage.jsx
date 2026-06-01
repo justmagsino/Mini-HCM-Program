@@ -60,8 +60,8 @@ export function AdminAttendancePage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Attendance management"
-        description="Search and filter attendance records. Edit or create corrections."
+        title="Punch corrections"
+        description="View, edit, or create attendance punches for any employee."
         actions={
           <Link to="/admin/attendance/edit" className="btn-primary btn-md">
             Create record

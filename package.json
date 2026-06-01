@@ -19,9 +19,10 @@
     "check:env:client": "node scripts/check-client-env.mjs",
     "check:env:server": "node scripts/check-server-env.mjs",
     "check:env": "npm run check:env:client && npm run check:env:server",
-    "deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes,storage",
+    "deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes",
     "deploy:hosting": "npm run build:client && firebase deploy --only hosting",
     "deploy:hosting:preview": "npm run build:client && firebase hosting:channel:deploy preview",
-    "seed:admin": "node scripts/seed-admin.mjs"
+    "seed:admin": "node scripts/seed-admin.mjs",
+    "simulate": "node scripts/simulate-hcm.mjs"
   }
 }

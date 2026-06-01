@@ -88,8 +88,8 @@ export function AdminReportsPage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Team reports"
-        description="Filter daily summaries, weekly totals, and exception alerts."
+        title="Daily & weekly reports"
+        description="Team summaries with regular, OT, night differential, late, and undertime."
       />
 
       <ErrorBanner message={error} onRetry={loadReports} />
@@ -174,10 +174,22 @@ export function AdminReportsPage() {
                   render: (row) => formatHours(row.totals?.totalOvertimeHours),
                 },
                 {
+                  key: 'nd',
+                  label: 'ND',
+                  align: 'right',
+                  render: (row) => formatHours(row.totals?.totalNightDifferentialHours),
+                },
+                {
                   key: 'late',
                   label: 'Late',
                   align: 'right',
                   render: (row) => formatMinutes(row.totals?.totalLateMinutes),
+                },
+                {
+                  key: 'undertime',
+                  label: 'Undertime',
+                  align: 'right',
+                  render: (row) => formatMinutes(row.totals?.totalUndertimeMinutes),
                 },
               ]}
               rows={weeklyReport.items}
