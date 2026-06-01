@@ -3,11 +3,11 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
+import { ChartContainer } from './ChartContainer.jsx';
 
 /**
  * @param {{ days: Array<{ date: string; totalRegularHours?: number; totalOvertimeHours?: number }> }} props
@@ -30,19 +30,17 @@ export function WeeklyHoursChart({ days }) {
       <h2 id="weekly-hours-chart-title" className="section-title mb-4">
         Weekly hours
       </h2>
-      <div className="h-72 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E0DCD0" />
-            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} unit="h" />
-            <Tooltip formatter={(value) => [`${Number(value).toFixed(2)}h`, '']} />
-            <Legend />
-            <Bar dataKey="regular" name="Regular" fill="#1A365D" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="overtime" name="Overtime" fill="#3E6D8E" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartContainer>
+        <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E0DCD0" />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 12 }} unit="h" />
+          <Tooltip formatter={(value) => [`${Number(value).toFixed(2)}h`, '']} />
+          <Legend />
+          <Bar dataKey="regular" name="Regular" fill="#1A365D" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="overtime" name="Overtime" fill="#3E6D8E" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ChartContainer>
       </div>
     </section>
   );
