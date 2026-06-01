@@ -33,6 +33,13 @@ app.use(
         callback(null, env.NODE_ENV !== 'production');
         return;
       }
+      if (
+        env.NODE_ENV === 'development' &&
+        /^http:\/\/localhost:\d+$/.test(origin)
+      ) {
+        callback(null, true);
+        return;
+      }
       callback(null, allowed.includes(origin));
     },
     credentials: false,

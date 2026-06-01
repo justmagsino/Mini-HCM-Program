@@ -42,6 +42,10 @@ export function getAuthFlowErrorMessage(error) {
     return apiMessage;
   }
 
+  if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+    return 'Cannot reach the API. Start the server (npm run dev:server) and open the URL Vite shows (often http://localhost:5173).';
+  }
+
   if (error?.code === 'PROFILE_NOT_FOUND') {
     return 'Account exists but profile is incomplete. Log in to finish setup.';
   }

@@ -56,7 +56,20 @@ const serverEnvSchema = z.object({
  * Validated server environment variables.
  * Import this module before Firebase Admin initialization.
  */
-const parsed = serverEnvSchema.parse(process.env);
+let parsed;
+try {
+  parsed = serverEnvSchema.parse(process.env);
+} catch (err) {
+  const missingCors = err?.issues?.some(
+    (issue) => issue.path?.[0] === 'CORS_ORIGIN' && issue.code === 'invalid_type',
+  );
+  if (missingCors) {
+    throw new Error(
+      'CORS_ORIGIN is required. On Render, set it to your Firebase Hosting URLs (HTTPS), e.g. https://mini-hcm-program.web.app,https://mini-hcm-program.firebaseapp.com',
+    );
+  }
+  throw err;
+}
 
 if (parsed.NODE_ENV === 'production') {
   const invalidCors = parsed.CORS_ORIGIN.filter((origin) => !origin.startsWith('https://'));
