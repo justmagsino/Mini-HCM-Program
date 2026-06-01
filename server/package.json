@@ -3,11 +3,26 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
+    "build": "node -e \"console.log('Server has no compile step; ready for production.')\"",
     "lint": "eslint src --max-warnings 0",
     "format": "prettier --write \"src/**/*.js\"",
-    "format:check": "prettier --check \"src/**/*.js\""
+    "format:check": "prettier --check \"src/**/*.js\"",
+    "test": "node --test src/__tests__/*.test.js",
+    "check:env": "node ../scripts/check-server-env.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "firebase-admin": "^13.2.0",
+    "helmet": "^8.0.0",
+    "zod": "^3.24.2"
   }
 }

@@ -56,7 +56,8 @@ Ensures one document per employee per calendar day.
 | Server file | Collection access |
 |-------------|-------------------|
 | `repositories/users.repository.js` | `users` |
-| `repositories/attendance.repository.js` | `attendance` |
+| `repositories/attendance.repository.js` | `attendance` (read/query) |
+| `repositories/attendanceWrite.repository.js` | `attendance` + `dailySummary` (atomic close) |
 | `repositories/dailySummary.repository.js` | `dailySummary` |
 
 ---
@@ -203,6 +204,20 @@ API maps DTOs to these field names exactly. No aliasing (e.g. do not use `displa
 ---
 
 ## 10. Scalability Considerations
+
+### Query and batch limits (implementation)
+
+| Operation | Limit / pattern |
+|-----------|-----------------|
+| `getUsersByIds` | Firestore `getAll` in chunks of **10** document refs |
+| `dailySummary.getByIds` | Same 10-ref batching for weekly report page rows |
+| `queryByDate` (attendance / dailySummary) | `.limit(1000)` safety cap per date |
+| Admin user list | Up to **500** employees (`MAX_EMPLOYEE_LIST`); filter/paginate in memory |
+| History range | Max **93** days per request |
+
+### Composite indexes
+
+Deploy via `firestore.indexes.json` (`npm run deploy:firestore`):
 
 **Composite indexes (create in Firebase console or `firestore.indexes.json`):**
 

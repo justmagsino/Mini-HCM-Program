@@ -4,6 +4,14 @@
 
 Document **environment setup, deployment steps, and verification** for Firebase Hosting (frontend) and Render or Vercel (backend).
 
+**Operational runbook:** [DEPLOYMENT.md](../DEPLOYMENT.md) at the repository root.
+
+**Also see:**
+
+- [ENVIRONMENT.md](./ENVIRONMENT.md) — all env vars
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — deployment topology
+- [README.md](../README.md) — local development setup
+
 ---
 
 ## 2. Responsibilities
@@ -11,9 +19,9 @@ Document **environment setup, deployment steps, and verification** for Firebase 
 | Target | Deploys |
 |--------|---------|
 | Firebase Hosting | `client/dist` SPA |
-| Render or Vercel | Express `server/` |
+| Render (preferred) or Vercel | Express `server/` |
 | Firebase Console | Auth, Firestore, rules |
-| GitHub Actions (optional) | CI/CD |
+| GitHub Actions | CI + optional Hosting/Firestore deploy |
 
 ---
 
@@ -21,17 +29,27 @@ Document **environment setup, deployment steps, and verification** for Firebase 
 
 ### AD-01: Separate dev and prod Firebase projects
 
+Use `.firebaserc` aliases (`default`, `production`).
+
 ### AD-02: SPA rewrite to index.html
 
-All routes → `/index.html` for React Router.
+Configured in `firebase.json` — all routes → `/index.html` for React Router.
 
-### AD-03: API on subdomain
+### AD-03: API on separate host
 
-Example: `api.yourdomain.com` → CORS allows `https://app.yourdomain.com`.
+Example: `https://mini-hcm-api.onrender.com` with `CORS_ORIGIN` listing Hosting URL(s).
 
-### AD-04: Render preferred for long-running Express
+### AD-04: Render preferred for Express
 
-Vercel requires serverless adapter; use Render unless team standard is Vercel.
+Long-running process; in-memory punch debounce and rate limits behave correctly. Vercel supported via `server/api/index.js` with serverless caveats.
+
+### AD-05: Client API base URL normalization
+
+`VITE_API_BASE_URL` is the API origin; `client/src/api/axios.js` appends `/api`.
+
+### AD-06: Secrets never in git
+
+Use `client/.env.production` (gitignored), host dashboards, and GitHub Actions secrets.
 
 ---
 
@@ -39,12 +57,19 @@ Vercel requires serverless adapter; use Render unless team standard is Vercel.
 
 | File | Role |
 |------|------|
-| `firebase.json` | Hosting config |
+| `firebase.json` | Hosting + Firestore deploy |
 | `.firebaserc` | Project aliases |
-| `firestore.rules` | Security rules |
+| `firestore.rules` | Deny-all client Firestore access |
 | `firestore.indexes.json` | Composite indexes |
-| `client/.env.production` | Build-time Vite vars (CI secrets) |
-| Render/Vercel dashboard | Server env vars |
+| `client/.env.production.example` | Production Vite vars template |
+| `server/.env.production.example` | Server production template |
+| `server/render.yaml` | Render Blueprint |
+| `server/vercel.json` | Vercel routing |
+| `server/api/index.js` | Vercel Express entry |
+| `package.json` (root) | Deploy orchestration scripts |
+| `scripts/check-*-env.mjs` | Pre-deploy validation |
+| `.github/workflows/ci.yml` | Test + build on PR |
+| `.github/workflows/deploy.yml` | Firestore + Hosting on tag |
 
 ---
 
@@ -52,93 +77,47 @@ Vercel requires serverless adapter; use Render unless team standard is Vercel.
 
 - Production uses same computation rules as dev.
 - `DEFAULT_TIMEZONE=Asia/Manila` unless org differs.
-- `ALLOW_PUBLIC_REGISTER` env controls open registration (default `true` for MVP).
+- `ALLOW_PUBLIC_REGISTER` defaults to `false` in production.
 
 ---
 
 ## 6. Data Flow
 
 ```
-Developer push → CI build client → firebase deploy --only hosting
-              → CI deploy server → Render/Vercel
-              → firebase deploy --only firestore:rules,firestore:indexes
+Developer → npm run build:client → client/dist
+         → firebase deploy --only hosting
+         → Render/Vercel auto-deploy (server/)
+         → firebase deploy --only firestore:rules,firestore:indexes
 ```
 
 ---
 
 ## 7. Firestore Usage
 
-**Indexes required:**
-
-| Collection | Fields |
-|------------|--------|
-| `attendance` | `userId` ASC, `date` DESC |
-| `dailySummary` | `userId` ASC, `date` DESC |
-| `attendance` | `date` ASC, `status` ASC (admin filter) |
-| `dailySummary` | `date` ASC (team daily report) |
-
-### `firestore.indexes.json` (starter)
-
-```json
-{
-  "indexes": [
-    {
-      "collectionGroup": "attendance",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "attendance",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "date", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "dailySummary",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "dailySummary",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "date", "order": "ASCENDING" }
-      ]
-    }
-  ],
-  "fieldOverrides": []
-}
-```
+Indexes defined in `firestore.indexes.json` at repo root. Deploy before queries that need composites.
 
 ---
 
 ## 8. API Behavior
 
-- Production `GET /api/health` monitored by uptime checker.
-- `NODE_ENV=production` disables stack traces.
+- `GET /api/health` — uptime checks (Render health check path).
+- `NODE_ENV=production` — generic 500 messages, no stack in responses.
 
 ---
 
 ## 9. Security Considerations
 
-- Store `FIREBASE_PRIVATE_KEY` in host secret manager with `\n` escaped.
-- Never commit `.env` or service account JSON.
-- Restrict CORS to production Hosting URL only.
+- `FIREBASE_PRIVATE_KEY` in host secret manager with `\n` escaped.
+- Never commit `.env`, `.env.production`, or service account JSON.
+- `CORS_ORIGIN` comma-separated; only Hosting (and preview) origins.
+- `TRUST_PROXY=true` behind Render/Vercel for rate limiting.
 
 ---
 
 ## 10. Scalability Considerations
 
 - Firebase Hosting CDN for static assets.
-- Render: scale instance when CPU sustained &gt; 70%.
+- Render: scale instance when CPU sustained high.
 - Monitor Firestore read/write quotas.
 
 ---
@@ -147,130 +126,38 @@ Developer push → CI build client → firebase deploy --only hosting
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/seed-admin.js` | Promote first admin (future) |
-| `npm run build` (client) | Vite production build |
-| `npm start` (server) | Production server entry |
+| `npm run seed:admin` | Promote first admin |
+| `npm run build:client` | Vite production build + env check |
+| `npm start` (server) | Production API entry |
 
 ---
 
 ## 12. Best Practices
 
-- Use preview channels: `firebase hosting:channel:deploy preview`.
-- Tag releases in git.
-- Document production URLs in README.
+- Preview channels: `npm run deploy:hosting:preview`
+- Tag releases: `v1.0.0` triggers deploy workflow
+- Run `npm run check:env` before first production deploy
 
 ---
 
 ## 13. Error Handling Expectations
 
-- Failed deploy: roll back to previous Hosting release / Render deploy.
-- Health check failure: alert on-call (manual MVP).
+- Failed deploy: roll back Hosting release / redeploy previous Render build.
+- Health check failure: verify `/api/health` and env vars.
 
 ---
 
 ## 14. Validation Rules
 
-- Verify all required env vars present before `npm start` (Zod in `config/env.js`).
-- Fail fast if `FIREBASE_PRIVATE_KEY` missing in production.
-
----
-
-## Environment Variables
-
-### Client (Vite)
-
-```env
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_API_BASE_URL=https://your-api.onrender.com
-```
-
-### Server
-
-```env
-NODE_ENV=production
-PORT=3001
-CORS_ORIGIN=https://your-app.web.app
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY=
-DEFAULT_TIMEZONE=Asia/Manila
-DEFAULT_SHIFT_START=09:00
-DEFAULT_SHIFT_END=18:00
-ALLOW_PUBLIC_REGISTER=true
-LATE_ALERT_MINUTES=15
-UNDERTIME_ALERT_MINUTES=30
-```
-
----
-
-## Deployment Steps
-
-### 1. Firebase project
-
-1. Enable Auth (Email/Password).
-2. Create Firestore (production mode).
-3. Register web app → copy config to client env.
-
-### 2. Deploy rules and indexes
-
-```bash
-firebase deploy --only firestore:rules,firestore:indexes
-```
-
-### 3. Deploy API (Render example)
-
-1. Connect repository; root directory `server`.
-2. Build: `npm ci`
-3. Start: `npm start`
-4. Set environment variables in dashboard.
-
-### 4. Deploy frontend
-
-```bash
-cd client && npm ci && npm run build
-firebase deploy --only hosting
-```
-
-### 5. Bootstrap first admin
-
-1. Register user via app.
-2. In Firestore Console: set `users/{uid}.role` to `admin` **or** run seed script with Admin SDK.
-3. Re-login to refresh access.
-
----
-
-## Post-Deploy Verification
-
-- [ ] `/api/health` returns 200
-- [ ] Register + login works
-- [ ] Punch in/out + summary created
-- [ ] Admin can list users
-- [ ] Firestore client write fails (security test)
-
----
-
-## firebase.json Example
-
-```json
-{
-  "hosting": {
-    "public": "client/dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }]
-  },
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  }
-}
-```
+- Zod in `server/src/config/env.js` fails fast on boot.
+- `scripts/check-client-env.mjs` before client build.
+- `scripts/check-server-env.mjs` before server start in CI.
 
 ---
 
 ## Related Documents
 
+- [DEPLOYMENT.md](../DEPLOYMENT.md)
 - `02-tech-stack.md`
 - `12-security-rules.md`
 - `15-development-workflow.md`

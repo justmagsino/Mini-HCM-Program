@@ -273,6 +273,16 @@ If documents disagree, apply this order: **`04-firestore-schema.md` → `11-api-
 
 ---
 
+## Production documentation
+
+| Topic | File |
+|-------|------|
+| Quick start & install | [../README.md](../README.md) |
+| Deployment runbook | [../DEPLOYMENT.md](../DEPLOYMENT.md) |
+| Environment variables | [ENVIRONMENT.md](./ENVIRONMENT.md) |
+| Architecture overview | [ARCHITECTURE.md](./ARCHITECTURE.md) |
+| Doc index | [README.md](./README.md) |
+
 ## Related Documents
 
 | Topic | File |

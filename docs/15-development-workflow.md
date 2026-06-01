@@ -244,6 +244,14 @@ Add Zod schemas same phase as endpoints.
 
 ## Doc Index
 
+| File | Topic |
+|------|-------|
+| [../README.md](../README.md) | Install, local dev, scripts |
+| [../DEPLOYMENT.md](../DEPLOYMENT.md) | Production deploy |
+| [ENVIRONMENT.md](./ENVIRONMENT.md) | Environment variables |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Architecture overview |
+| [README.md](./README.md) | Full doc index |
+
 | # | File | Topic |
 |---|------|-------|
 | 01 | project-overview | Scope, architecture |

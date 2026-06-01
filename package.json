@@ -1,0 +1,27 @@
+{
+  "name": "mini-hcm",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Mini HCM Time Tracking System",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "install:all": "npm ci --prefix client && npm ci --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "build": "npm run build:client",
+    "build:client": "node scripts/check-client-env.mjs && npm run build:prod --prefix client",
+    "build:server": "npm run build --prefix server",
+    "start:server": "npm start --prefix server",
+    "test": "npm test --prefix server",
+    "test:all": "npm test --prefix server && npm run build:client",
+    "check:env:client": "node scripts/check-client-env.mjs",
+    "check:env:server": "node scripts/check-server-env.mjs",
+    "check:env": "npm run check:env:client && npm run check:env:server",
+    "deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes,storage",
+    "deploy:hosting": "npm run build:client && firebase deploy --only hosting",
+    "deploy:hosting:preview": "npm run build:client && firebase hosting:channel:deploy preview",
+    "seed:admin": "node scripts/seed-admin.mjs"
+  }
+}

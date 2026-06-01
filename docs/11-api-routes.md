@@ -316,6 +316,8 @@ Validation: **at least one of** `date` or `userId` must be present; else `400 VA
 | GET | `/api/admin/reports/weekly` | Bearer | admin |
 | GET | `/api/admin/reports/exceptions` | Bearer | admin |
 | GET | `/api/admin/dashboard/kpis` | Bearer | admin |
+| GET | `/api/admin/dashboard/roster` | Bearer | admin |
+| GET | `/api/admin/dashboard/day` | Bearer | admin |
 
 **GET `/api/admin/summaries/daily?userId=&date=`** — required params.  
 **200:** `{ "data": <dailySummary|null> }`
@@ -345,15 +347,55 @@ Thresholds: `LATE_ALERT_MINUTES`, `UNDERTIME_ALERT_MINUTES` (env).
 
 Definitions: `09-admin-system.md`.
 
+**GET `/api/admin/dashboard/roster?date=`**
+
+**200:**
+
+```json
+{
+  "items": [
+    {
+      "userId": "abc123",
+      "fullName": "Maria Santos",
+      "email": "maria@company.com",
+      "status": "open",
+      "attendance": { }
+    }
+  ]
+}
+```
+
+`status`: `open` | `closed` | `absent` (no attendance doc for date).
+
+**GET `/api/admin/dashboard/day?date=`** *(preferred for admin dashboard UI)*
+
+Single round trip combining KPIs and roster (one shared employee + attendance query on server).
+
+**200:**
+
+```json
+{
+  "kpis": { },
+  "roster": [ ]
+}
+```
+
+`kpis` shape matches `/dashboard/kpis`. `roster` is the same array as `items` from `/dashboard/roster`.
+
 ---
 
 ## 9. Security Considerations
 
-- CORS: `process.env.CORS_ORIGIN` only.
+- CORS: `process.env.CORS_ORIGIN` only (HTTPS-only in production).
 - `helmet()`, `express-rate-limit` on `/api`.
-- Auth routes: 20 req / 15 min / IP.
-- Punch routes: 10 req / 1 min / user.
-- Admin writes: 30 req / 15 min / user.
+- Production: `requireVerifiedEmail` after `authenticate` on protected routes.
+- Rate limits (approximate):
+  - Global `/api`: 100 / 15 min (skips `/auth`, `/admin`, `/summaries` — those use dedicated limiters)
+  - `/api/auth`: 20 / 15 min / IP; register: 5 / hour
+  - `/api/admin`: 120 / 15 min; admin writes: 30 / 15 min / user
+  - `/api/summaries`: 120 / 15 min
+  - Punch: 10 / 1 min / user; attendance read: 60 / 15 min / user
+- Profile loaded once per request with 30s in-memory cache (per API instance).
 - Zod `.strict()` on all POST/PATCH bodies.
 
 ---

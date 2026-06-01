@@ -1,0 +1,38 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Connect this repo and set "Root Directory" to server, or deploy via Blueprint from repo root.
+services:
+  - type: web
+    name: mini-hcm-api
+    runtime: node
+    rootDir: server
+    plan: free
+    region: singapore
+    buildCommand: npm ci --omit=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: true
+      - key: ALLOW_PUBLIC_REGISTER
+        value: false
+      - key: DEFAULT_TIMEZONE
+        value: Asia/Manila
+      - key: DEFAULT_SHIFT_START
+        value: '09:00'
+      - key: DEFAULT_SHIFT_END
+        value: '18:00'
+      - key: LATE_ALERT_MINUTES
+        value: 15
+      - key: UNDERTIME_ALERT_MINUTES
+        value: 30
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false

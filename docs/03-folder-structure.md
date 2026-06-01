@@ -4,6 +4,8 @@
 
 Define the **canonical repository layout** and which files own which concerns. Ensures every feature is implemented in a predictable location following the service-layer architecture.
 
+**Production overview:** [ARCHITECTURE.md](./ARCHITECTURE.md) · **Local setup:** [../README.md](../README.md)
+
 ---
 
 ## 2. Responsibilities
@@ -12,7 +14,9 @@ Define the **canonical repository layout** and which files own which concerns. E
 |------|------|
 | `client/` | UI, routing, forms, charts, Axios API clients |
 | `server/` | REST API, auth middleware, services, computation engine, Firestore repositories |
-| `docs/` | Single source of truth (no runtime code) |
+| `docs/` | Specifications and production guides |
+| `scripts/` | Env validation, admin seed |
+| Root config | Firebase Hosting, Firestore rules/indexes, CI workflows |
 
 ---
 
@@ -20,7 +24,7 @@ Define the **canonical repository layout** and which files own which concerns. E
 
 ### AD-01: Monorepo with two packages
 
-Single git repository; `client/` and `server/` are independent Node packages.
+Single git repository; `client/` and `server/` are independent Node packages. Root `package.json` orchestrates scripts.
 
 ### AD-02: Service layer required
 
@@ -28,30 +32,42 @@ Single git repository; `client/` and `server/` are independent Node packages.
 
 Controllers do not call Firestore directly. Computation does not live in routes.
 
-### AD-03: No client-side Firestore writes
+### AD-03: No client-side Firestore data access
 
-`client/src` has no `firebase/firestore` imports for MVP.
+`client/src/config/firebase.js` — **Auth only**. No `getFirestore` in the SPA.
 
 ### AD-04: Engine isolation
 
 `server/src/engines/computation.engine.js` is **pure** (no I/O).
 
+### AD-05: Lazy-loaded routes
+
+`client/src/routes/AppRoutes.jsx` uses `React.lazy` per page for smaller initial bundle.
+
 ---
 
-## 4. Folder / File Responsibilities
-
-### Repository root
+## 4. Repository root
 
 ```
-mini-hcm/
-├── client/
-├── server/
-├── docs/
-├── .gitignore
-└── README.md
+Mini HCM Program/
+├── client/                    # Vite + React SPA
+├── server/                    # Express API
+├── docs/                      # Specifications + ENVIRONMENT, ARCHITECTURE
+├── scripts/                   # check-client-env, check-server-env, seed-admin
+├── .github/workflows/         # ci.yml, deploy.yml
+├── firebase.json              # Hosting, Firestore, Storage
+├── firestore.rules
+├── firestore.indexes.json
+├── storage.rules
+├── .firebaserc
+├── package.json               # Root scripts (deploy, test, dev)
+├── README.md
+└── DEPLOYMENT.md
 ```
 
-### Client (`client/`)
+---
+
+## 5. Client (`client/`)
 
 ```
 client/
@@ -60,68 +76,75 @@ client/
 │   ├── main.jsx
 │   ├── App.jsx
 │   ├── config/
-│   │   └── firebase.js              # Auth only
+│   │   ├── env.js             # Zod-validated Vite env
+│   │   └── firebase.js        # Firebase Auth only
 │   ├── api/
-│   │   ├── axios.js
+│   │   ├── axios.js           # Base URL + Bearer interceptor
 │   │   ├── auth.api.js
 │   │   ├── attendance.api.js
 │   │   ├── summary.api.js
 │   │   └── admin.api.js
 │   ├── components/
-│   │   ├── ui/
-│   │   ├── layout/
-│   │   │   ├── Navbar.jsx
-│   │   │   ├── Sidebar.jsx
-│   │   │   ├── ProtectedRoute.jsx
-│   │   │   └── AdminRoute.jsx
-│   │   └── attendance/
+│   │   ├── ui/                # Button, Input, Card, DataTable, …
+│   │   ├── layout/            # AppShell, Sidebar, AppNavbar, routes
+│   │   ├── attendance/        # PunchControls, AttendanceTable, badges
+│   │   ├── dashboard/         # StatusBanner
+│   │   ├── summary/           # SummaryTable, WeeklyAnalyticsCards
+│   │   └── charts/            # WeeklyHoursChart, TeamOvertimeChart (lazy)
 │   ├── pages/
-│   │   ├── auth/
-│   │   │   ├── LoginPage.jsx
-│   │   │   └── RegisterPage.jsx
-│   │   ├── employee/
-│   │   │   ├── DashboardPage.jsx
-│   │   │   ├── PunchPage.jsx
-│   │   │   └── HistoryPage.jsx
-│   │   └── admin/
-│   │       ├── AdminDashboardPage.jsx
-│   │       ├── EmployeesPage.jsx
-│   │       ├── AttendanceEditPage.jsx
-│   │       └── ReportsPage.jsx
+│   │   ├── auth/              # LoginPage, RegisterPage
+│   │   ├── employee/          # Dashboard, Attendance, Reports
+│   │   └── admin/             # Admin dashboard, employees, attendance, reports
 │   ├── contexts/
-│   │   └── AuthContext.jsx
+│   │   └── AuthContext.jsx    # AuthState + AuthActions providers
 │   ├── hooks/
 │   │   ├── useAuth.js
-│   │   └── useAttendance.js
+│   │   ├── useProfileTimezone.js
+│   │   ├── useDebouncedValue.js
+│   │   ├── useAsyncLoad.js
+│   │   ├── useAttendance.js
+│   │   ├── useSummary.js
+│   │   ├── useEmployeeDashboard.js
+│   │   └── useAdminDashboard.js
 │   ├── routes/
-│   │   └── AppRoutes.jsx
-│   ├── schemas/
-│   │   ├── auth.schema.js
-│   │   ├── attendance.schema.js
-│   │   ├── summary.schema.js
-│   │   └── admin.schema.js
+│   │   └── AppRoutes.jsx      # Lazy route definitions
+│   ├── schemas/               # Zod (forms)
+│   ├── styles/
+│   │   └── index.css          # Tailwind + component layer
 │   └── utils/
+│       ├── cn.js
 │       ├── dates.js
-│       └── format.js
+│       ├── timezone.js
+│       ├── format.js
+│       └── chartData.js
+├── index.html
 ├── tailwind.config.js
-├── vite.config.js
+├── vite.config.js             # manualChunks: vendor, firebase, charts, forms
 ├── .env.example
+├── .env.production.example
 └── package.json
 ```
 
-### Server (`server/`)
+---
+
+## 6. Server (`server/`)
 
 ```
 server/
+├── api/
+│   └── index.js               # Vercel serverless entry
 ├── src/
-│   ├── index.js
-│   ├── app.js
+│   ├── index.js               # HTTP server listen
+│   ├── app.js                 # Express app + middleware order
 │   ├── config/
-│   │   ├── env.js
-│   │   └── firebase.js
+│   │   ├── env.js             # Zod-validated process.env
+│   │   └── firebaseAdmin.js
 │   ├── middleware/
 │   │   ├── auth.middleware.js
+│   │   ├── emailVerified.middleware.js
 │   │   ├── role.middleware.js
+│   │   ├── rateLimiters.js
+│   │   ├── userCache.middleware.js
 │   │   ├── validate.middleware.js
 │   │   └── error.middleware.js
 │   ├── routes/
@@ -131,43 +154,40 @@ server/
 │   │   ├── summary.routes.js
 │   │   └── admin.routes.js
 │   ├── controllers/
-│   │   ├── auth.controller.js
-│   │   ├── attendance.controller.js
-│   │   ├── summary.controller.js
-│   │   └── admin.controller.js
 │   ├── services/
 │   │   ├── auth.service.js
 │   │   ├── attendance.service.js
 │   │   ├── summary.service.js
-│   │   └── admin.service.js
+│   │   ├── admin.service.js
+│   │   ├── report.service.js
+│   │   └── computation.service.js
 │   ├── repositories/
 │   │   ├── users.repository.js
 │   │   ├── attendance.repository.js
+│   │   ├── attendanceWrite.repository.js
 │   │   └── dailySummary.repository.js
 │   ├── engines/
 │   │   └── computation.engine.js
 │   ├── schemas/
-│   │   ├── auth.schema.js
-│   │   ├── attendance.schema.js
-│   │   └── admin.schema.js
-│   └── utils/
-│       ├── dates.js
-│       └── errors.js
+│   ├── utils/
+│   │   ├── dates.js
+│   │   ├── errors.js
+│   │   ├── metrics.js
+│   │   ├── firestoreBatch.js
+│   │   ├── adminHelpers.js
+│   │   ├── attendanceValidation.js
+│   │   └── summaryAggregate.js
+│   └── __tests__/
+├── render.yaml
+├── vercel.json
 ├── .env.example
+├── .env.production.example
 └── package.json
 ```
 
 ---
 
-## 5. Business Rules
-
-- All attendance mutations go through `attendance.service.js`.
-- All metric calculations go through `computation.engine.js`.
-- **`summary.service.js` only** syncs `dailySummary` after attendance close/edit (called from `attendance.service` and `admin.service`; no duplicate sync logic elsewhere).
-
----
-
-## 6. Data Flow
+## 7. Data flow
 
 ```
 Client Page → api/*.api.js → Express routes → controller → service → repository → Firestore
@@ -176,73 +196,9 @@ Client Page → api/*.api.js → Express routes → controller → service → r
 
 ---
 
-## 7. Firestore Usage
+## 8. Related documents
 
-Repositories are the **only** server modules that import Firestore references:
-
-- `users.repository.js` → `users`
-- `attendance.repository.js` → `attendance`
-- `dailySummary.repository.js` → `dailySummary`
-
----
-
-## 8. API Behavior
-
-- `routes/` mounts paths from `11-api-routes.md`.
-- `schemas/` defines Zod validators used by `validate.middleware.js`.
-
----
-
-## 9. Security Considerations
-
-- `middleware/auth.middleware.js` runs before all protected routes.
-- `middleware/role.middleware.js` guards `/api/admin/*`.
-- No secrets in `client/` except Firebase public config.
-
----
-
-## 10. Scalability Considerations
-
-- Split large route files by sub-router when &gt; ~200 lines.
-- Future `packages/shared/` only if Zod schemas must be duplicated—requires doc update.
-
----
-
-## 11. Reusable Utilities / Services
-
-| Path | Reuse |
-|------|-------|
-| `server/src/utils/dates.js` | Timezone, work date |
-| `server/src/utils/errors.js` | `AppError` class |
-| `client/src/utils/format.js` | Hours/minutes display |
-| `client/src/api/axios.js` | Shared HTTP client |
-
----
-
-## 12. Best Practices
-
-- One React component per file.
-- Match API module names to server route domains.
-- Colocate Zod schemas with the feature (`schemas/attendance.schema.js`).
-
----
-
-## 13. Error Handling Expectations
-
-- `error.middleware.js` catches all thrown `AppError` and unknown errors.
-- Client API modules rethrow or return normalized `{ error }` for UI toasts.
-
----
-
-## 14. Validation Rules
-
-- Every `POST`/`PATCH` in `routes/` must chain `validate(schema)`.
-- Client forms must use the same field names as Firestore (`fullName`, not `displayName`).
-
----
-
-## Related Documents
-
-- `11-api-routes.md`
-- `14-coding-standards.md`
-- `15-development-workflow.md`
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [11-api-routes.md](./11-api-routes.md)
+- [14-coding-standards.md](./14-coding-standards.md)
+- [15-development-workflow.md](./15-development-workflow.md)
