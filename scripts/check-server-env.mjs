@@ -6,7 +6,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const envPath = join(root, 'server', '.env');
@@ -60,7 +60,9 @@ if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PUBLIC_REGISTER =
 }
 
 try {
-  await import(join(root, 'server', 'src', 'config', 'env.js'));
+  const envModuleUrl = pathToFileURL(join(root, 'server', 'src', 'config', 'env.js')).href;
+  const { getFirebasePrivateKey } = await import(envModuleUrl);
+  getFirebasePrivateKey();
   console.log('Server environment OK.');
 } catch (err) {
   console.error('Server environment validation failed:');
